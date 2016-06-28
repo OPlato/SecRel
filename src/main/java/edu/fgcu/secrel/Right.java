@@ -1,86 +1,119 @@
 /**
- *
+ * TODO
  */
 package edu.fgcu.secrel;
 
 /**
+ * TODO
+ * 
  * @author lngibson
- *
+ *        
  */
 public final class Right {
-    
+
     /**
-     *
+     * TODO
      */
-    public final Role role;
-    
+    public final int roleId;
+
     /**
-     *
+     * TODO
      */
-    public final Service service;
-    
+    public final int serviceId;
+
     /**
-     *
+     * TODO
      */
     private int accessType;
-    
+
     /**
-     * @param role
-     * @param service
-     * @param accessType
+     * TODO
+     * 
+     * @param roleId
+     *            TODO
+     * @param serviceId
+     *            TODO
      */
-    public Right( Role role, Service service ) {
+    protected Right( int roleId, int serviceId ) {
         super();
-        this.role = role;
-        this.service = service;
+        this.roleId = roleId;
+        this.serviceId = serviceId;
     }
-    
+
     /**
-     * @param role
-     * @param service
+     * TODO
+     * 
+     * @param roleId
+     *            TODO
+     * @param serviceId
+     *            TODO
      * @param accessType
+     *            TODO
      */
-    public Right( Role role, Service service, int accessType ) {
+    protected Right( int roleId, int serviceId, int accessType ) {
         super();
-        this.role = role;
-        this.service = service;
+        this.roleId = roleId;
+        this.serviceId = serviceId;
         this.accessType = accessType;
     }
-    
+
     /**
-     *
+     * TODO
      */
     public void checkRights() {
         throw new RuntimeException( "not implemented" );
     }
-    
+
     /**
+     * TODO
+     * 
      * @return the accessType
      */
     public int getAccessType() {
         return accessType;
     }
-    
+
     /**
+     *  TODO
      * @return the role
      */
     public Role getRole() {
-        return role;
+        return System.findRole(roleId);
     }
-    
+
     /**
+     * TODO
+     * 
+     * @return the role
+     */
+    public int getRoleId() {
+        return roleId;
+    }
+
+    /**
+     *  TODO
      * @return the service
      */
     public Service getService() {
-        return service;
+        return System.findService(serviceId);
     }
-    
+
     /**
+     *  TODO
+     * @return the service
+     */
+    public int getServiceId() {
+        return serviceId;
+    }
+
+    /**
+     * TODO
+     * 
      * @param accessType
      *            the accessType to set
      */
     public void setAccessType( int accessType ) {
         this.accessType = accessType;
     }
-    
+
 }

@@ -1,12 +1,9 @@
 /**
- * This file defines the Service type. The SecRel pattern defines the Service
- * type as a class but it is defined as an interface here to more easily
- * facilitate differing implementations. The Services class is also defined in
- * this file. The Services class is not included in the SecRel Pattern but is
- * included here to facilitate simple creation and retrieval of the secure
- * Service instances.
+ * This file defines the Service type. TODO
  */
 package edu.fgcu.secrel;
+
+import java.io.InputStream;
 
 /**
  * This interface represents a reliable service to be protected by the SecRel's
@@ -15,119 +12,118 @@ package edu.fgcu.secrel;
  * @author lngibson
  *
  */
-public interface Service {
-
+public abstract class Service {
+    
     /**
+     * TODO
+     *
      * @author lngibson
      *
      */
     public class ReferenceMonitor {
-
+        
         /**
-         *
+         * TODO
          */
+        @SuppressWarnings( "unused" )
         private int id;
-
+        
         /**
-         *
+         * TODO
          */
         public void authorizeUser() {
             throw new RuntimeException( "not implemented" );
         }
-        
+
         /**
          * @param user
+         *            TODO
          */
         public void checkRights( User user ) {
             throw new RuntimeException( "not implemented" );
         }
-
+        
     }
-
+    
     /**
-     * This class contains the mechanisms for instantiating and retrieving
-     * Service instances.
-     *
-     * @author lngibson
-     *
+     * TODO
      */
-    public static final class Services {
-
-        /**
-         * This method returns the Service represented by the specified
-         * identifier if one exists.
-         *
-         * @param id
-         * @return
-         */
-        public Service find( long id ) {
-            throw new RuntimeException( "not implemented" );
-        }
-
+    private boolean idSet = false;
+    
+    /**
+     * TODO
+     */
+    private int id;
+    
+    /**
+     * TODO
+     * @return the id
+     */
+    public int getId() {
+        return id;
     }
-
+    
     /**
-     * Returns the unique identifier of this service. The SecRel pattern
-     * specifies a private id instance variable. This method seeks to satisfy
-     * that requirement as interfaces cannot specify instance variables.
+     * TODO
      *
-     * @return
+     * @return TODO
      */
-    long getId();
-
-    /**
-     * Returns the unique human readable identifier of this service. This method
-     * is not included in the SecRel pattern.
-     *
-     * @return
-     */
-    String getName();
-
+    public abstract String getName();
+    
     /**
      * Returns a Rights instance representing the Rights this Service instance
      * contains and the Roles for which those Rights apply.
      *
-     * @return
+     * @return TODO
      */
-    Rights getRights();
-
+    public Rights getRights() {
+        throw new RuntimeException( "not implemented" );
+    }
+    
     /**
      * Performs the action specified by this Service instance.
+     *
+     * @param stream
+     *            TODO
      */
-    void invokeService();
-
+    public abstract void invokeService( InputStream stream );
+    
     /**
      * Creates a new ReferenceMonitor for this Service.
      *
-     * @return
+     * @return TODO
      */
-    ReferenceMonitor monitor();
-
-    /**
-     * Determines whether the specified User is authorized to invoke this
-     * Service.
-     *
-     */
-    void processRequest( User user );
-
-    /*
-     * (non-Javadoc) I do not know the purpose of this method.
-     *
-     * @return
-     */
-    default int serviceLevel() {
-        return -1;
+    public ReferenceMonitor monitor() {
+        throw new RuntimeException( "not implemented" );
     }
-
+    
     /**
-     * This method sets the identifier of this Service instance. This method is
-     * called by Services in order to assign unique identifiers to distinct
-     * Service instances. An identifier can only be assigned once. If this
-     * method is called twice on an instance, implementations must throw an
-     * IllegalStateException. This method is not included in the SecRel pattern.
+     * TODO
      *
-     * @param id
+     * @param user
+     *            TODO
+     *
      */
-    void setId( long id );
-
+    public abstract void processRequest( User user );
+    
+    /**
+     * TODO
+     *
+     * @return TODO
+     */
+    // I do not know the purpose of this method.
+    public int serviceLevel() {
+        throw new RuntimeException( "not implemented" );
+    }
+    
+    /**
+     * TODO
+     * @param id TODO
+     */
+    protected void setId(int id) {
+        if( idSet )
+            throw new IllegalStateException("Service Id has already been set");
+        this.id = id;
+    }
+    
 }
