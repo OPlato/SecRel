@@ -5,11 +5,14 @@ package edu.fgcu.secrel;
 
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import edu.fgcu.secrel.Service.ReferenceMonitor;
 
 /**
  * TODO
@@ -295,7 +298,7 @@ public class System {
 
     /**
      * TODO
-     * 
+     *
      * @param roleId
      *            TODO
      * @return TODO
@@ -317,7 +320,7 @@ public class System {
 
     /**
      * TODO
-     * 
+     *
      * @param serviceId
      *            TODO
      * @return TODO
@@ -339,7 +342,7 @@ public class System {
 
     /**
      * TODO
-     * 
+     *
      * @param userId
      *            TODO
      * @return TODO
@@ -357,6 +360,22 @@ public class System {
     public static User findUser(String userName) {
         // TODO
         throw new RuntimeException("not implemented");
+    }
+
+    /**
+     * TODO
+     *
+     * @param serviceId
+     *            TODO
+     * @return TODO
+     */
+    protected static int[] getAuthorizedIds( Integer serviceId ) {
+        Map< Long, Right > entries = System.serviceBackwardMap.subMap( serviceId.longValue() << 32, serviceId.longValue() + 1 << 32 );
+        int[] ids = new int[entries.size()];
+        int i = 0;
+        for( Iterator< Long > it = entries.keySet().iterator(); it.hasNext(); i++ )
+            ids[i] = ( int ) ( it.next() & 0xffffffffl );
+        return ids;
     }
 
     /**
@@ -399,6 +418,22 @@ public class System {
      */
     protected static String getRoleName( Integer id ) {
         return System.roleIds.get( id );
+    }
+
+    /**
+     * TODO
+     *
+     * @param roleId
+     *            TODO
+     * @return TODO
+     */
+    protected static int[] getServiceIds( Integer roleId ) {
+        Map< Long, Right > entries = System.serviceForwardMap.subMap( roleId.longValue() << 32, roleId.longValue() + 1 << 32 );
+        int[] ids = new int[entries.size()];
+        int i = 0;
+        for( Iterator< Long > it = entries.keySet().iterator(); it.hasNext(); i++ )
+            ids[i] = ( int ) ( it.next() & 0xffffffffl );
+        return ids;
     }
 
     /**
@@ -506,8 +541,86 @@ public class System {
     /**
      * TODO
      *
-     * @param userId TODO
-     * @param roleId TODO
+     * @param roleId
+     *            TODO
+     * @param serviceId
+     *            TODO
+     * @return TODO
+     */
+    public static boolean isAuthorizedFor( Integer roleId, Integer serviceId ) {
+        // check if a roleId is null
+        if( roleId == null )
+            // throw exception
+            throw new NullPointerException( "Role id cannot be null." );
+        if( !System.roleIds.containsKey( roleId ) )
+            throw new IllegalArgumentException( "Role with that id does not exist." );
+        // check if a serviceId is null
+        if( serviceId == null )
+            // throw exception
+            throw new NullPointerException( "Service id cannot be null." );
+        if( !System.serviceIds.containsKey( serviceId ) )
+            throw new IllegalArgumentException( "Service with that id does not exist." );
+        return System.serviceForwardMap.containsKey( roleId.longValue() << 32 | serviceId );
+    }
+
+    /**
+     * TODO
+     *
+     * @param role
+     *            TODO
+     * @param service
+     *            TODO
+     * @return TODO
+     */
+    public static boolean isAuthorizedFor( Role role, Service service ) {
+        // check if a role is null
+        if( role == null )
+            // throw exception
+            throw new NullPointerException( "Role id cannot be null." );
+        if( !System.roleIds.containsKey( role.getId() ) )
+            throw new IllegalArgumentException( "Role does not exist." );
+        // check if a service is null
+        if( service == null )
+            // throw exception
+            throw new NullPointerException( "Service id cannot be null." );
+        if( !System.serviceIds.containsKey( service.getId() ) )
+            throw new IllegalArgumentException( "Service does not exist." );
+        return System.serviceForwardMap.containsKey( ( long ) role.getId() << 32 | service.getId() );
+    }
+
+    /**
+     * TODO
+     *
+     * @param roleName
+     *            TODO
+     * @param serviceName
+     *            TODO
+     * @return TODO
+     */
+    public static boolean isAuthorizedFor( String roleName, String serviceName ) {
+        // check if a roleName is null
+        if( roleName == null )
+            // throw exception
+            throw new NullPointerException( "Role name cannot be null." );
+        if( !System.roleNames.containsKey( roleName ) )
+            throw new IllegalArgumentException( "Role with that name does not exist." );
+        // check if a serviceName is null
+        if( serviceName == null )
+            // throw exception
+            throw new NullPointerException( "Service name cannot be null." );
+        if( !System.serviceNames.containsKey( serviceName ) )
+            throw new IllegalArgumentException( "Service with that name does not exist." );
+        return System.serviceForwardMap.containsKey(
+                System.roleNames.get( roleName ).longValue() << 32 | System.serviceNames.get( serviceName ).getId() );
+    }
+
+    /**
+     * TODO
+     *
+     * @param userId
+     *            TODO
+     * @param roleId
+     *            TODO
      * @return TODO
      */
     public static boolean isMemberOf( Integer userId, Integer roleId ) {
@@ -599,9 +712,18 @@ public class System {
             throw new NullPointerException( "User id cannot be null." );
         if( !System.userIds.containsKey( userId ) )
             throw new IllegalArgumentException( "User with that id does not exist." );
-        int[] roleIds = System.getRoleIds(userId);
-        for( @SuppressWarnings( "unused" ) int roleId : roleIds )
-            /* TODO */ throw new RuntimeException( "not implemented" );
+        // check if a serviceId is null
+        if( serviceId == null )
+            // throw exception
+            throw new NullPointerException( "Service id cannot be null." );
+        if( !System.serviceIds.containsKey( serviceId ) )
+            throw new IllegalArgumentException( "Service with that id does not exist." );
+        Service service = System.serviceIds.get( serviceId );
+        ReferenceMonitor monitor = service.monitor( userId );
+        if( monitor.checkRights() ) {
+            service.invokeService( data );
+            return true;
+        }
         return false;
     }
 
@@ -614,26 +736,6 @@ public class System {
      * @return TODO
      */
     public static boolean makeRequest( Integer userId, Integer serviceId, String data ) {
-        /* TODO */ throw new RuntimeException( "not implemented" );
-    }
-
-    /**
-     * TODO
-     *
-     * @param service TODO
-     * @return TODO
-     */
-    public static boolean registerService( ReliableHardwareService service ) {
-        /* TODO */ throw new RuntimeException( "not implemented" );
-    }
-
-    /**
-     * TODO
-     *
-     * @param service TODO
-     * @return TODO
-     */
-    public static boolean registerService( ReliableSoftwareService service ) {
         /* TODO */ throw new RuntimeException( "not implemented" );
     }
 
@@ -655,13 +757,19 @@ public class System {
         if( System.serviceNames.containsKey( service.getName() ) )
             // throw exception
             throw new IllegalArgumentException(
-                    String.format( "A Service with the name \"%s\" already exists", service.getName() ) );
+                    String.format( "A Service with the name \"%s\" already exists.", service.getName() ) );
         // compute new serviceId
         Integer id = System.serviceIds.isEmpty() ? 0 : System.serviceIds.lastKey() + 1;
         try {
+            // attempt to set id
             service.setId(id);
         } catch( IllegalStateException e ) {
+            // id is already set retrieve id
             id = service.getId();
+            // check if id is already in use
+            if( System.serviceIds.containsKey( id ) )
+                // throw exception
+                throw new IllegalStateException( "Service id is already in use." );
         }
         System.serviceIds.put( id, service );
         System.serviceNames.put( service.getName(), service );
