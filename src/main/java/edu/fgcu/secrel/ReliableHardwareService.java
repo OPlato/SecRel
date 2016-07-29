@@ -3,11 +3,12 @@
  */
 package edu.fgcu.secrel;
 
-
 /**
  * TODO
- * @author lngibson
  *
+ * @author lngibson
+ *         
  */
 public abstract class ReliableHardwareService extends Service {
+	// not implemented
 }

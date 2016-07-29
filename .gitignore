@@ -3,3 +3,4 @@
 pom.ref.xml
 .project
 .classpath
+/bin/
