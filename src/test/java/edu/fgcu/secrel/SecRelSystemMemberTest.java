@@ -1,5 +1,5 @@
 /*
- * <!-- TODO -->
+ * This file defines the tests of SecRelSystem's member functions.
  */
 package edu.fgcu.secrel;
 
@@ -12,9 +12,9 @@ import org.junit.*;
  * make, remove and query role assignments.
  *
  * @author lngibson
- *        
+ *
  */
-public class SecRelSystemAssignmentTest {
+public class SecRelSystemMemberTest {
 	
 	/**
 	 * The administrator role. The administrator, ibuckley and lngibson users
@@ -83,19 +83,19 @@ public class SecRelSystemAssignmentTest {
 	@BeforeClass
 	public static void setUpBeforeClass() {
 		// create roles and users for testing
-		SecRelSystemAssignmentTest.Administrator = SecRelSystem.createRole("administrator");
+		SecRelSystemMemberTest.Administrator = Roles.createRole("administrator");
 		// SecRelSystemAssignmentTest.Teacher = System.createRole( "teacher" );
-		SecRelSystemAssignmentTest.Assistant = SecRelSystem.createRole("assistant");
-		SecRelSystemAssignmentTest.CoolGuy = SecRelSystem.createRole("coolguy");
-		SecRelSystemAssignmentTest.Lames = SecRelSystem.createRole("lames");
-		SecRelSystemAssignmentTest.administrator = SecRelSystem.createUser("administrator");
-		SecRelSystemAssignmentTest.ibuckley = SecRelSystem.createUser("ibuckley");
-		SecRelSystemAssignmentTest.lngibson = SecRelSystem.createUser("lngibson");
-		SecRelSystem.assignRole("administrator", "administrator");
-		SecRelSystem.assignRole("ibuckley", "administrator");
+		SecRelSystemMemberTest.Assistant = Roles.createRole("assistant");
+		SecRelSystemMemberTest.CoolGuy = Roles.createRole("coolguy");
+		SecRelSystemMemberTest.Lames = Roles.createRole("lames");
+		SecRelSystemMemberTest.administrator = Users.createUser("administrator");
+		SecRelSystemMemberTest.ibuckley = Users.createUser("ibuckley");
+		SecRelSystemMemberTest.lngibson = Users.createUser("lngibson");
+		Members.assignRole("administrator", "administrator");
+		Members.assignRole("ibuckley", "administrator");
 		// SecRelSystem.assignRole( "ibuckley", "teacher" );
-		SecRelSystem.assignRole("lngibson", "administrator");
-		SecRelSystem.assignRole("lngibson", "assistant");
+		Members.assignRole("lngibson", "administrator");
+		Members.assignRole("lngibson", "assistant");
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -106,20 +106,20 @@ public class SecRelSystemAssignmentTest {
 	@AfterClass
 	public static void tearDownAfterClass() {
 		SecRelSystemDebuggingUtil.verify();
-		if (SecRelSystem.hasRole(SecRelSystemAssignmentTest.Administrator))
-			SecRelSystem.removeRole(SecRelSystemAssignmentTest.Administrator);
-		if (SecRelSystem.hasRole(SecRelSystemAssignmentTest.Assistant))
-			SecRelSystem.removeRole(SecRelSystemAssignmentTest.Assistant);
-		if (SecRelSystem.hasRole(SecRelSystemAssignmentTest.CoolGuy))
-			SecRelSystem.removeRole(SecRelSystemAssignmentTest.CoolGuy);
-		if (SecRelSystem.hasRole(SecRelSystemAssignmentTest.Lames))
-			SecRelSystem.removeRole(SecRelSystemAssignmentTest.Lames);
-		if (SecRelSystem.hasUser(SecRelSystemAssignmentTest.administrator))
-			SecRelSystem.removeUser(SecRelSystemAssignmentTest.administrator);
-		if (SecRelSystem.hasUser(SecRelSystemAssignmentTest.ibuckley))
-			SecRelSystem.removeUser(SecRelSystemAssignmentTest.ibuckley);
-		if (SecRelSystem.hasUser(SecRelSystemAssignmentTest.lngibson))
-			SecRelSystem.removeUser(SecRelSystemAssignmentTest.lngibson);
+		if (Roles.hasRole(SecRelSystemMemberTest.Administrator))
+			Roles.removeRole(SecRelSystemMemberTest.Administrator);
+		if (Roles.hasRole(SecRelSystemMemberTest.Assistant))
+			Roles.removeRole(SecRelSystemMemberTest.Assistant);
+		if (Roles.hasRole(SecRelSystemMemberTest.CoolGuy))
+			Roles.removeRole(SecRelSystemMemberTest.CoolGuy);
+		if (Roles.hasRole(SecRelSystemMemberTest.Lames))
+			Roles.removeRole(SecRelSystemMemberTest.Lames);
+		if (Users.hasUser(SecRelSystemMemberTest.administrator))
+			Users.removeUser(SecRelSystemMemberTest.administrator);
+		if (Users.hasUser(SecRelSystemMemberTest.ibuckley))
+			Users.removeUser(SecRelSystemMemberTest.ibuckley);
+		if (Users.hasUser(SecRelSystemMemberTest.lngibson))
+			Users.removeUser(SecRelSystemMemberTest.lngibson);
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -144,8 +144,8 @@ public class SecRelSystemAssignmentTest {
 	public void setUp() {
 		// the fake role and user must be created before each execution because
 		// the RemoveRole* and RemoveUser test cases remove them
-		FakeRole = SecRelSystem.createRole("fake_role");
-		fakeUser = SecRelSystem.createUser("fake_user");
+		FakeRole = Roles.createRole("fake_role");
+		fakeUser = Users.createUser("fake_user");
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -159,20 +159,20 @@ public class SecRelSystemAssignmentTest {
 		SecRelSystemDebuggingUtil.verify();
 		// the fake role and user must be removed so that setUp does not fail
 		// when (re)creating them
-		if (SecRelSystem.hasRole(FakeRole))
-			SecRelSystem.removeRole(FakeRole);
-		if (SecRelSystem.hasUser(fakeUser))
-			SecRelSystem.removeUser(fakeUser);
-		if (SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.CoolGuy))
-			SecRelSystem.unassignRole(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.CoolGuy);
+		if (Roles.hasRole(FakeRole))
+			Roles.removeRole(FakeRole);
+		if (Users.hasUser(fakeUser))
+			Users.removeUser(fakeUser);
+		if (Members.isMemberOf(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.CoolGuy))
+			Members.unassignRole(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.CoolGuy);
 		// the philosopher role and plato user are created by the CreateRole and
 		// CreateUser test cases
 		// there are no known side effects for not removing them but they are
 		// removed just in case
-		if (SecRelSystem.hasRole("philosopher"))
-			SecRelSystem.removeRole("philosopher");
-		if (SecRelSystem.hasUser("plato"))
-			SecRelSystem.removeUser("plato");
+		if (Roles.hasRole("philosopher"))
+			Roles.removeRole("philosopher");
+		if (Users.hasUser("plato"))
+			Users.removeUser("plato");
 	}
 	
 	/**
@@ -180,13 +180,13 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testAssignRole() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.CoolGuy);
+		Members.assignRole(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.CoolGuy);
 		Assert.assertTrue("The System failed to reflect the lngibson user's assignment to the coolguy role",
-		        SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.CoolGuy));
-		Assert.assertTrue(SecRelSystemDebuggingUtil.memberForwardCheck(SecRelSystemAssignmentTest.lngibson.getId(),
-		        SecRelSystemAssignmentTest.CoolGuy.getId()));
-		Assert.assertTrue(SecRelSystemDebuggingUtil.memberBackwardCheck(SecRelSystemAssignmentTest.lngibson.getId(),
-		        SecRelSystemAssignmentTest.CoolGuy.getId()));
+				Members.isMemberOf(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.CoolGuy));
+		Assert.assertTrue(SecRelSystemDebuggingUtil.memberForwardCheck(SecRelSystemMemberTest.lngibson.getId(),
+				SecRelSystemMemberTest.CoolGuy.getId()));
+		Assert.assertTrue(SecRelSystemDebuggingUtil.memberBackwardCheck(SecRelSystemMemberTest.lngibson.getId(),
+				SecRelSystemMemberTest.CoolGuy.getId()));
 	}
 	
 	/**
@@ -196,7 +196,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalStateException.class)
 	public void testAssignRoleAlreadyAssigned() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.administrator, SecRelSystemAssignmentTest.Administrator);
+		Members.assignRole(SecRelSystemMemberTest.administrator, SecRelSystemMemberTest.Administrator);
 	}
 	
 	/**
@@ -204,14 +204,13 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testAssignRoleById() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.lngibson.getId(),
-		        SecRelSystemAssignmentTest.CoolGuy.getId());
+		Members.assignRole(SecRelSystemMemberTest.lngibson.getId(), SecRelSystemMemberTest.CoolGuy.getId());
 		Assert.assertTrue("The System failed to reflect the lngibson user's assignment to the coolguy role",
-		        SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.CoolGuy));
-		Assert.assertTrue(SecRelSystemDebuggingUtil.memberForwardCheck(SecRelSystemAssignmentTest.lngibson,
-		        SecRelSystemAssignmentTest.CoolGuy));
-		Assert.assertTrue(SecRelSystemDebuggingUtil.memberBackwardCheck(SecRelSystemAssignmentTest.lngibson,
-		        SecRelSystemAssignmentTest.CoolGuy));
+				Members.isMemberOf(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.CoolGuy));
+		Assert.assertTrue(SecRelSystemDebuggingUtil.memberForwardCheck(SecRelSystemMemberTest.lngibson,
+				SecRelSystemMemberTest.CoolGuy));
+		Assert.assertTrue(SecRelSystemDebuggingUtil.memberBackwardCheck(SecRelSystemMemberTest.lngibson,
+				SecRelSystemMemberTest.CoolGuy));
 	}
 	
 	/**
@@ -221,8 +220,8 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalStateException.class)
 	public void testAssignRoleByIdAlreadyAssigned() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.administrator.getId(),
-		        SecRelSystemAssignmentTest.Administrator.getId());
+		Members.assignRole(SecRelSystemMemberTest.administrator.getId(),
+				SecRelSystemMemberTest.Administrator.getId());
 	}
 	
 	/**
@@ -230,7 +229,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testAssignRoleByIdNonExistantRole() {
-		SecRelSystem.assignRole(fakeUser.getId(), -1);
+		Members.assignRole(fakeUser.getId(), -1);
 	}
 	
 	/**
@@ -238,7 +237,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testAssignRoleByIdNonExistantUser() {
-		SecRelSystem.assignRole(-1, FakeRole.getId());
+		Members.assignRole(-1, FakeRole.getId());
 	}
 	
 	/**
@@ -247,7 +246,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testAssignRoleByIdNullRoleId() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.lngibson.getId(), null);
+		Members.assignRole(SecRelSystemMemberTest.lngibson.getId(), null);
 	}
 	
 	/**
@@ -256,7 +255,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testAssignRoleByIdNullUserId() {
-		SecRelSystem.assignRole(null, SecRelSystemAssignmentTest.CoolGuy.getId());
+		Members.assignRole(null, SecRelSystemMemberTest.CoolGuy.getId());
 	}
 	
 	/**
@@ -264,13 +263,13 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testAssignRoleByName() {
-		SecRelSystem.assignRole("lngibson", "coolguy");
+		Members.assignRole("lngibson", "coolguy");
 		Assert.assertTrue("The System failed to reflect the lngibson user's assignment to the coolguy role",
-		        SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.CoolGuy));
-		Assert.assertTrue(SecRelSystemDebuggingUtil.memberForwardCheck(SecRelSystemAssignmentTest.lngibson.getId(),
-		        SecRelSystemAssignmentTest.CoolGuy.getId()));
-		Assert.assertTrue(SecRelSystemDebuggingUtil.memberBackwardCheck(SecRelSystemAssignmentTest.lngibson.getId(),
-		        SecRelSystemAssignmentTest.CoolGuy.getId()));
+				Members.isMemberOf(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.CoolGuy));
+		Assert.assertTrue(SecRelSystemDebuggingUtil.memberForwardCheck(SecRelSystemMemberTest.lngibson.getId(),
+				SecRelSystemMemberTest.CoolGuy.getId()));
+		Assert.assertTrue(SecRelSystemDebuggingUtil.memberBackwardCheck(SecRelSystemMemberTest.lngibson.getId(),
+				SecRelSystemMemberTest.CoolGuy.getId()));
 	}
 	
 	/**
@@ -280,8 +279,8 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalStateException.class)
 	public void testAssignRoleByNameAlreadyAssigned() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.administrator.getName(),
-		        SecRelSystemAssignmentTest.Administrator.getName());
+		Members.assignRole(SecRelSystemMemberTest.administrator.getName(),
+				SecRelSystemMemberTest.Administrator.getName());
 	}
 	
 	/**
@@ -289,7 +288,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testAssignRoleByNameNonExistantRole() {
-		SecRelSystem.assignRole(fakeUser.getName(), "nonexistent role");
+		Members.assignRole(fakeUser.getName(), "nonexistent role");
 	}
 	
 	/**
@@ -297,7 +296,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testAssignRoleByNameNonExistantUser() {
-		SecRelSystem.assignRole("nonexistent user", FakeRole.getName());
+		Members.assignRole("nonexistent user", FakeRole.getName());
 	}
 	
 	/**
@@ -306,7 +305,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testAssignRoleByNameNullRoleName() {
-		SecRelSystem.assignRole("lngibson", null);
+		Members.assignRole("lngibson", null);
 	}
 	
 	/**
@@ -315,7 +314,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testAssignRoleByNameNullUserName() {
-		SecRelSystem.assignRole(null, "coolguy");
+		Members.assignRole(null, "coolguy");
 	}
 	
 	/**
@@ -323,8 +322,8 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testAssignRoleNonExistantRole() {
-		SecRelSystem.removeRole(FakeRole);
-		SecRelSystem.assignRole(fakeUser, FakeRole);
+		Roles.removeRole(FakeRole);
+		Members.assignRole(fakeUser, FakeRole);
 	}
 	
 	/**
@@ -332,8 +331,8 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testAssignRoleNonExistantUser() {
-		SecRelSystem.removeUser(fakeUser);
-		SecRelSystem.assignRole(fakeUser, FakeRole);
+		Users.removeUser(fakeUser);
+		Members.assignRole(fakeUser, FakeRole);
 	}
 	
 	/**
@@ -342,7 +341,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testAssignRoleNullRole() {
-		SecRelSystem.assignRole(SecRelSystemAssignmentTest.lngibson, null);
+		Members.assignRole(SecRelSystemMemberTest.lngibson, null);
 	}
 	
 	/**
@@ -351,7 +350,7 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testAssignRoleNullUser() {
-		SecRelSystem.assignRole(null, SecRelSystemAssignmentTest.CoolGuy);
+		Members.assignRole(null, SecRelSystemMemberTest.CoolGuy);
 	}
 	
 	/**
@@ -359,9 +358,9 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testGetMembers() {
-		Collection<User> as = SecRelSystem.getMembers(SecRelSystemAssignmentTest.Administrator.getId());
-		List<User> es = Arrays.asList(SecRelSystemAssignmentTest.administrator, SecRelSystemAssignmentTest.ibuckley,
-		        SecRelSystemAssignmentTest.lngibson);
+		Collection<User> as = Members.getMembers(SecRelSystemMemberTest.Administrator.getId());
+		List<User> es = Arrays.asList(SecRelSystemMemberTest.administrator, SecRelSystemMemberTest.ibuckley,
+				SecRelSystemMemberTest.lngibson);
 		Collections.sort(es);
 		Iterator<User> ai = as.iterator(), ei = es.iterator();
 		for (; ai.hasNext() && ei.hasNext();)
@@ -375,8 +374,8 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testGetRoles() {
-		Collection<Role> as = SecRelSystem.getRoles(SecRelSystemAssignmentTest.lngibson.getId());
-		List<Role> es = Arrays.asList(SecRelSystemAssignmentTest.Administrator, SecRelSystemAssignmentTest.Assistant);
+		Collection<Role> as = Members.getRoles(SecRelSystemMemberTest.lngibson.getId());
+		List<Role> es = Arrays.asList(SecRelSystemMemberTest.Administrator, SecRelSystemMemberTest.Assistant);
 		Collections.sort(es);
 		Iterator<Role> ai = as.iterator(), ei = es.iterator();
 		for (; ai.hasNext() && ei.hasNext();)
@@ -390,10 +389,10 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testIsMemberOf() {
-		Assert.assertTrue("System denies membership of the administrator user in the administrator role", SecRelSystem
-		        .isMemberOf(SecRelSystemAssignmentTest.administrator, SecRelSystemAssignmentTest.Administrator));
+		Assert.assertTrue("System denies membership of the administrator user in the administrator role",
+				Members.isMemberOf(SecRelSystemMemberTest.administrator, SecRelSystemMemberTest.Administrator));
 		Assert.assertFalse("System claims membership of the lngibson user in the lames role",
-		        SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.lngibson, SecRelSystemAssignmentTest.Lames));
+				Members.isMemberOf(SecRelSystemMemberTest.lngibson, SecRelSystemMemberTest.Lames));
 	}
 	
 	/**
@@ -402,10 +401,10 @@ public class SecRelSystemAssignmentTest {
 	@Test
 	public void testIsMemberOfById() {
 		Assert.assertTrue("System denies membership of the administrator user in the administrator role",
-		        SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.administrator.getId(),
-		                SecRelSystemAssignmentTest.Administrator.getId()));
-		Assert.assertFalse("System claims membership of the lngibson user in the lames role", SecRelSystem
-		        .isMemberOf(SecRelSystemAssignmentTest.lngibson.getId(), SecRelSystemAssignmentTest.Lames.getId()));
+				Members.isMemberOf(SecRelSystemMemberTest.administrator.getId(),
+						SecRelSystemMemberTest.Administrator.getId()));
+		Assert.assertFalse("System claims membership of the lngibson user in the lames role", Members
+				.isMemberOf(SecRelSystemMemberTest.lngibson.getId(), SecRelSystemMemberTest.Lames.getId()));
 	}
 	
 	/**
@@ -414,10 +413,10 @@ public class SecRelSystemAssignmentTest {
 	@Test
 	public void testIsMemberOfByName() {
 		Assert.assertTrue("System denies membership of the administrator user in the administrator role",
-		        SecRelSystem.isMemberOf(SecRelSystemAssignmentTest.administrator.getName(),
-		                SecRelSystemAssignmentTest.Administrator.getName()));
-		Assert.assertFalse("System claims membership of the lngibson user in the lames role", SecRelSystem
-		        .isMemberOf(SecRelSystemAssignmentTest.lngibson.getName(), SecRelSystemAssignmentTest.Lames.getName()));
+				Members.isMemberOf(SecRelSystemMemberTest.administrator.getName(),
+						SecRelSystemMemberTest.Administrator.getName()));
+		Assert.assertFalse("System claims membership of the lngibson user in the lames role", Members
+				.isMemberOf(SecRelSystemMemberTest.lngibson.getName(), SecRelSystemMemberTest.Lames.getName()));
 	}
 	
 	/**
@@ -425,12 +424,12 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testUnassignRole() {
-		SecRelSystem.assignRole("fake_user", "fake_role");
+		Members.assignRole("fake_user", "fake_role");
 		Assert.assertTrue("System denies membership of the fake_user user in the fake_role role",
-		        SecRelSystem.isMemberOf(fakeUser, FakeRole));
-		SecRelSystem.unassignRole(fakeUser, FakeRole);
+				Members.isMemberOf(fakeUser, FakeRole));
+		Members.unassignRole(fakeUser, FakeRole);
 		Assert.assertFalse("System claims membership of the fake_user user in the fake_role role",
-		        SecRelSystem.isMemberOf(fakeUser, FakeRole));
+				Members.isMemberOf(fakeUser, FakeRole));
 		Assert.assertFalse(SecRelSystemDebuggingUtil.memberForwardCheck(fakeUser.getId(), FakeRole.getId()));
 		Assert.assertFalse(SecRelSystemDebuggingUtil.memberBackwardCheck(fakeUser.getId(), FakeRole.getId()));
 	}
@@ -440,12 +439,12 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testUnassignRoleById() {
-		SecRelSystem.assignRole("fake_user", "fake_role");
+		Members.assignRole("fake_user", "fake_role");
 		Assert.assertTrue("System denies membership of the fake_user user in the fake_role role",
-		        SecRelSystem.isMemberOf(fakeUser, FakeRole));
-		SecRelSystem.unassignRole(fakeUser.getId(), FakeRole.getId());
+				Members.isMemberOf(fakeUser, FakeRole));
+		Members.unassignRole(fakeUser.getId(), FakeRole.getId());
 		Assert.assertFalse("System claims membership of the fake_user user in the fake_role role",
-		        SecRelSystem.isMemberOf(fakeUser, FakeRole));
+				Members.isMemberOf(fakeUser, FakeRole));
 		Assert.assertFalse(SecRelSystemDebuggingUtil.memberForwardCheck(fakeUser.getId(), FakeRole.getId()));
 		Assert.assertFalse(SecRelSystemDebuggingUtil.memberBackwardCheck(fakeUser.getId(), FakeRole.getId()));
 	}
@@ -455,12 +454,12 @@ public class SecRelSystemAssignmentTest {
 	 */
 	@Test
 	public void testUnassignRoleByName() {
-		SecRelSystem.assignRole("fake_user", "fake_role");
+		Members.assignRole("fake_user", "fake_role");
 		Assert.assertTrue("System denies membership of the fake_user user in the fake_role role",
-		        SecRelSystem.isMemberOf(fakeUser, FakeRole));
-		SecRelSystem.unassignRole(fakeUser.getName(), FakeRole.getName());
+				Members.isMemberOf(fakeUser, FakeRole));
+		Members.unassignRole(fakeUser.getName(), FakeRole.getName());
 		Assert.assertFalse("System claims membership of the fake_user user in the fake_role role",
-		        SecRelSystem.isMemberOf(fakeUser, FakeRole));
+				Members.isMemberOf(fakeUser, FakeRole));
 		Assert.assertFalse(SecRelSystemDebuggingUtil.memberForwardCheck(fakeUser.getId(), FakeRole.getId()));
 		Assert.assertFalse(SecRelSystemDebuggingUtil.memberBackwardCheck(fakeUser.getId(), FakeRole.getId()));
 	}

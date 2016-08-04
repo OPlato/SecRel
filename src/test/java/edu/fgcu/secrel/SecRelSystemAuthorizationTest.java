@@ -1,5 +1,5 @@
 /**
- * TODO: SecRelSystemServiceIntegrationTest.java comments
+ * This file defines the tests of SecRelSystem's authorization functions.
  */
 package edu.fgcu.secrel;
 
@@ -8,15 +8,15 @@ import static org.junit.Assert.fail;
 import org.junit.*;
 
 /**
- * <!-- TODO: SecRelSystemServiceIntegrationTest comments -->
+ * <!-- TODO: SecRelSystemAuthorizationUnitTest comments -->
  *
  * @author lngibson
- *         
+ *
  */
-public class SecRelSystemServiceIntegrationTest {
-	
+public class SecRelSystemAuthorizationTest {
+
 	/**
-	 * <!-- TODO: SecRelSystemServiceIntegrationTest.setUpBeforeClass comments
+	 * <!-- TODO: SecRelSystemAuthorizationUnitTest.setUpBeforeClass comments
 	 * -->
 	 *
 	 * @throws java.lang.Exception <!-- TODO -->
@@ -25,9 +25,9 @@ public class SecRelSystemServiceIntegrationTest {
 	public static void setUpBeforeClass() throws Exception {
 		// not implemented
 	}
-	
+
 	/**
-	 * <!-- TODO: SecRelSystemServiceIntegrationTest.tearDownAfterClass comments
+	 * <!-- TODO: SecRelSystemAuthorizationUnitTest.tearDownAfterClass comments
 	 * -->
 	 *
 	 * @throws java.lang.Exception <!-- TODO -->
@@ -36,9 +36,9 @@ public class SecRelSystemServiceIntegrationTest {
 	public static void tearDownAfterClass() throws Exception {
 		// not implemented
 	}
-	
+
 	/**
-	 * <!-- TODO: SecRelSystemServiceIntegrationTest.setUp comments -->
+	 * <!-- TODO: SecRelSystemAuthorizationUnitTest.setUp comments -->
 	 *
 	 * @throws java.lang.Exception <!-- TODO -->
 	 */
@@ -46,9 +46,9 @@ public class SecRelSystemServiceIntegrationTest {
 	public void setUp() throws Exception {
 		// not implemented
 	}
-	
+
 	/**
-	 * <!-- TODO: SecRelSystemServiceIntegrationTest.tearDown comments -->
+	 * <!-- TODO: SecRelSystemAuthorizationUnitTest.tearDown comments -->
 	 *
 	 * @throws java.lang.Exception <!-- TODO -->
 	 */
@@ -56,13 +56,14 @@ public class SecRelSystemServiceIntegrationTest {
 	public void tearDown() throws Exception {
 		// not implemented
 	}
-	
+
 	/**
-	 * <!-- TODO: SecRelSystemServiceIntegrationTest.test comments -->
+	 * <!-- TODO: comments --> <!-- TODO: Add variations and negative testing
+	 * -->
 	 */
 	@Test
-	public void test() {
+	public void testAuthorizeRole() {
 		fail("Not yet implemented");
 	}
-	
+
 }

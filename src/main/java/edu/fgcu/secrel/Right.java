@@ -1,49 +1,53 @@
 /**
- * TODO
+ * This file defines the Right class. The Right class is simply the
+ * encapsulation of a role id, a service id and an access type.
  */
+// Note: accessType, checkRights
 package edu.fgcu.secrel;
 
 /**
- * TODO
+ * The Right class is the encapsulation of a role and service id as well as an
+ * access type for use by the SecRelSystem to represent role-service
+ * authorizations.
  *
  * @author lngibson
  *
  */
 public final class Right {
-
+	
 	/**
-	 * TODO
+	 * The id of the authorized role.
 	 */
 	public final int roleId;
-
+	
 	/**
-	 * TODO
+	 * The id of the service.
 	 */
 	public final int serviceId;
-
+	
 	/**
-	 * TODO
+	 * I do not know the purpose of this field.
 	 */
 	private int accessType;
-
+	
 	/**
-	 * TODO
+	 * Constructs a Right given the role and service.
 	 *
-	 * @param roleId TODO
-	 * @param serviceId TODO
+	 * @param roleId the id of the role
+	 * @param serviceId the id of the service
 	 */
 	protected Right(int roleId, int serviceId) {
 		super();
 		this.roleId = roleId;
 		this.serviceId = serviceId;
 	}
-
+	
 	/**
-	 * TODO
+	 * Constructs a Right given the role, service and accesType.
 	 *
-	 * @param roleId TODO
-	 * @param serviceId TODO
-	 * @param accessType TODO
+	 * @param roleId the id of the role
+	 * @param serviceId the id of the service
+	 * @param accessType the access type
 	 */
 	protected Right(int roleId, int serviceId, int accessType) {
 		super();
@@ -51,67 +55,67 @@ public final class Right {
 		this.serviceId = serviceId;
 		this.accessType = accessType;
 	}
-
+	
 	/**
-	 * TODO
+	 * I do not know the purpose of this method
 	 */
 	@SuppressWarnings("static-method")
 	public void checkRights() {
 		throw new RuntimeException("not implemented");
 	}
-
+	
 	/**
-	 * TODO
-	 *
+	 * Getter for accessType.
+	 * 
 	 * @return the accessType
 	 */
 	public int getAccessType() {
 		return accessType;
 	}
-
+	
 	/**
-	 * TODO
+	 * Returns the Role instance corresponding to the authorized role.
 	 *
 	 * @return the role
 	 */
 	public Role getRole() {
-		return SecRelSystem.findRole(roleId);
+		return Roles.findRole(roleId);
 	}
-
+	
 	/**
-	 * TODO
-	 *
-	 * @return the role
+	 * Getter for roleId.
+	 * 
+	 * @return the roleId
 	 */
 	public int getRoleId() {
 		return roleId;
 	}
-
+	
 	/**
-	 * TODO
+	 * Returns the Service.
 	 *
 	 * @return the service
 	 */
 	public Service getService() {
-		return SecRelSystem.findService(serviceId);
+		return Services.findService(serviceId);
 	}
-
+	
 	/**
-	 * TODO
+	 * Getter for serviceId.
 	 *
-	 * @return the service
+	 * @return the serviceId
 	 */
 	public int getServiceId() {
 		return serviceId;
 	}
-
+	
 	/**
-	 * TODO
+	 * Setter accessType.
 	 *
 	 * @param accessType the accessType to set
 	 */
 	public void setAccessType(int accessType) {
 		this.accessType = accessType;
 	}
-
+	
 }

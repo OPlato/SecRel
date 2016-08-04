@@ -1,5 +1,5 @@
 /*
- * <!-- TODO -->
+ * This file defines the tests of SecRelSystem's role functions.
  */
 package edu.fgcu.secrel;
 
@@ -10,7 +10,7 @@ import org.junit.*;
  * functions.
  *
  * @author lngibson
- *        
+ *
  */
 public class SecRelSystemRoleTest {
 	
@@ -53,10 +53,10 @@ public class SecRelSystemRoleTest {
 	@BeforeClass
 	public static void setUpBeforeClass() {
 		// create roles for testing
-		SecRelSystemRoleTest.Administrator = SecRelSystem.createRole("administrator");
-		SecRelSystemRoleTest.Teacher = SecRelSystem.createRole("teacher");
+		SecRelSystemRoleTest.Administrator = Roles.createRole("administrator");
+		SecRelSystemRoleTest.Teacher = Roles.createRole("teacher");
 		// SecRelSystemRoleTest.Assistant = System.createRole( "assistant" );
-		SecRelSystemRoleTest.CoolGuy = SecRelSystem.createRole("coolguy");
+		SecRelSystemRoleTest.CoolGuy = Roles.createRole("coolguy");
 		// SecRelSystemRoleTest.Lames = System.createRole( "lames" );
 		SecRelSystemDebuggingUtil.verify();
 	}
@@ -68,12 +68,12 @@ public class SecRelSystemRoleTest {
 	@AfterClass
 	public static void tearDownAfterClass() {
 		SecRelSystemDebuggingUtil.verify();
-		if (SecRelSystem.hasRole(SecRelSystemRoleTest.Administrator))
-			SecRelSystem.removeRole(SecRelSystemRoleTest.Administrator);
-		if (SecRelSystem.hasRole(SecRelSystemRoleTest.Teacher))
-			SecRelSystem.removeRole(SecRelSystemRoleTest.Teacher);
-		if (SecRelSystem.hasRole(SecRelSystemRoleTest.CoolGuy))
-			SecRelSystem.removeRole(SecRelSystemRoleTest.CoolGuy);
+		if (Roles.hasRole(SecRelSystemRoleTest.Administrator))
+			Roles.removeRole(SecRelSystemRoleTest.Administrator);
+		if (Roles.hasRole(SecRelSystemRoleTest.Teacher))
+			Roles.removeRole(SecRelSystemRoleTest.Teacher);
+		if (Roles.hasRole(SecRelSystemRoleTest.CoolGuy))
+			Roles.removeRole(SecRelSystemRoleTest.CoolGuy);
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -92,13 +92,13 @@ public class SecRelSystemRoleTest {
 	public void setUp() {
 		// the fake role must be created before each execution because
 		// the RemoveRole* test cases remove it
-		FakeRole = SecRelSystem.createRole("fake_role");
-		SecRelSystem.createUser("fake_user1");
-		SecRelSystem.createUser("fake_user2");
-		SecRelSystem.createUser("fake_user3");
-		SecRelSystem.assignRole("fake_user1", "fake_role");
-		SecRelSystem.assignRole("fake_user2", "fake_role");
-		SecRelSystem.assignRole("fake_user3", "fake_role");
+		FakeRole = Roles.createRole("fake_role");
+		Users.createUser("fake_user1");
+		Users.createUser("fake_user2");
+		Users.createUser("fake_user3");
+		Members.assignRole("fake_user1", "fake_role");
+		Members.assignRole("fake_user2", "fake_role");
+		Members.assignRole("fake_user3", "fake_role");
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -112,19 +112,19 @@ public class SecRelSystemRoleTest {
 		SecRelSystemDebuggingUtil.verify();
 		// the fake role and user must be removed so that setUp does not fail
 		// when (re)creating them
-		if (SecRelSystem.hasRole(FakeRole))
-			SecRelSystem.removeRole(FakeRole);
-		if (SecRelSystem.hasUser("fake_user1"))
-			SecRelSystem.removeUser("fake_user1");
-		if (SecRelSystem.hasUser("fake_user2"))
-			SecRelSystem.removeUser("fake_user2");
-		if (SecRelSystem.hasUser("fake_user3"))
-			SecRelSystem.removeUser("fake_user3");
+		if (Roles.hasRole(FakeRole))
+			Roles.removeRole(FakeRole);
+		if (Users.hasUser("fake_user1"))
+			Users.removeUser("fake_user1");
+		if (Users.hasUser("fake_user2"))
+			Users.removeUser("fake_user2");
+		if (Users.hasUser("fake_user3"))
+			Users.removeUser("fake_user3");
 		// the philosopher role is created by the CreateRole test case
 		// there are no known side effects for not removing it but it is
 		// removed just in case
-		if (SecRelSystem.hasRole("philosopher"))
-			SecRelSystem.removeRole("philosopher");
+		if (Roles.hasRole("philosopher"))
+			Roles.removeRole("philosopher");
 	}
 	
 	/**
@@ -132,9 +132,9 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testCreateRole() {
-		Role r = SecRelSystem.createRole("philosopher");
+		Role r = Roles.createRole("philosopher");
 		Assert.assertNotNull("System failed to return a Role instance after the philosopher role's creation", r);
-		Assert.assertTrue("The System failed to reflect the creation of the philosopher role", SecRelSystem.hasRole(r));
+		Assert.assertTrue("The System failed to reflect the creation of the philosopher role", Roles.hasRole(r));
 	}
 	
 	/**
@@ -143,7 +143,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testCreateRoleDuplicateName() {
-		SecRelSystem.createRole(SecRelSystemRoleTest.Teacher.getName());
+		Roles.createRole(SecRelSystemRoleTest.Teacher.getName());
 	}
 	
 	/**
@@ -151,7 +151,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testCreateRoleNullName() {
-		SecRelSystem.createRole(null);
+		Roles.createRole(null);
 	}
 	
 	/**
@@ -159,10 +159,10 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testFindRoleById() {
-		Role r = SecRelSystem.findRole(SecRelSystemRoleTest.Administrator.getId());
+		Role r = Roles.findRole(SecRelSystemRoleTest.Administrator.getId());
 		Assert.assertNotNull("System failed to return a Role instance for the administrator role", r);
 		Assert.assertEquals("System return an invalid Role instance for the administrator role",
-		        SecRelSystemRoleTest.Administrator, r);
+				SecRelSystemRoleTest.Administrator, r);
 	}
 	
 	/**
@@ -170,7 +170,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testFindRoleByIdNonExistent() {
-		SecRelSystem.findRole(-1);
+		Roles.findRole(-1);
 	}
 	
 	/**
@@ -178,7 +178,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testFindRoleByIdNullId() {
-		SecRelSystem.findRole((Integer) null);
+		Roles.findRole((Integer) null);
 	}
 	
 	/**
@@ -186,10 +186,10 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testFindRoleByName() {
-		Role r = SecRelSystem.findRole(SecRelSystemRoleTest.Administrator.getName());
+		Role r = Roles.findRole(SecRelSystemRoleTest.Administrator.getName());
 		Assert.assertNotNull("System failed to return a Role instance for the administrator role", r);
 		Assert.assertEquals("System return an invalid Role instance for the administrator role",
-		        SecRelSystemRoleTest.Administrator, r);
+				SecRelSystemRoleTest.Administrator, r);
 	}
 	
 	/**
@@ -197,7 +197,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testFindRoleByNameNonExistent() {
-		SecRelSystem.findRole("nonexistent role");
+		Roles.findRole("nonexistent role");
 	}
 	
 	/**
@@ -205,7 +205,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testFindRoleByNameNullName() {
-		SecRelSystem.findRole((String) null);
+		Roles.findRole((String) null);
 	}
 	
 	/**
@@ -214,7 +214,7 @@ public class SecRelSystemRoleTest {
 	@Test
 	public void testHasRole() {
 		Assert.assertTrue("System did not acknowledge administrator role's existence",
-		        SecRelSystem.hasRole(SecRelSystemRoleTest.Administrator));
+				Roles.hasRole(SecRelSystemRoleTest.Administrator));
 	}
 	
 	/**
@@ -223,7 +223,7 @@ public class SecRelSystemRoleTest {
 	@Test
 	public void testHasRoleById() {
 		Assert.assertTrue("System did not acknowledge administrator role's existence",
-		        SecRelSystem.hasRole(SecRelSystemRoleTest.Administrator.getId()));
+				Roles.hasRole(SecRelSystemRoleTest.Administrator.getId()));
 	}
 	
 	/**
@@ -231,7 +231,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testHasRoleByIdNonExistantRole() {
-		Assert.assertFalse("System claims existence of role with id -1", SecRelSystem.hasRole(-1));
+		Assert.assertFalse("System claims existence of role with id -1", Roles.hasRole(-1));
 	}
 	
 	/**
@@ -239,8 +239,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testHasRoleByName() {
-		Assert.assertTrue("System did not acknowledge administrator role's existence",
-		        SecRelSystem.hasRole("administrator"));
+		Assert.assertTrue("System did not acknowledge administrator role's existence", Roles.hasRole("administrator"));
 	}
 	
 	/**
@@ -249,7 +248,7 @@ public class SecRelSystemRoleTest {
 	@Test
 	public void testHasRoleByNameNonExistantRole() {
 		Assert.assertFalse("System claims existence of role with name 'nonexistent role'",
-		        SecRelSystem.hasRole("nonexistent role"));
+				Roles.hasRole("nonexistent role"));
 	}
 	
 	/**
@@ -257,10 +256,9 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testHasRoleNonExistantRole() {
-		Role r = SecRelSystem.createRole("nonexistent role");
-		SecRelSystem.removeRole(r);
-		Assert.assertFalse("System claims existence of role, nonexistent role, which was removed",
-		        SecRelSystem.hasRole(r));
+		Role r = Roles.createRole("nonexistent role");
+		Roles.removeRole(r);
+		Assert.assertFalse("System claims existence of role, nonexistent role, which was removed", Roles.hasRole(r));
 	}
 	
 	/**
@@ -268,9 +266,8 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testRemoveRole() {
-		SecRelSystem.removeRole(FakeRole);
-		Assert.assertFalse("System claims existence of role, fake_role, which was removed",
-		        SecRelSystem.hasRole(FakeRole));
+		Roles.removeRole(FakeRole);
+		Assert.assertFalse("System claims existence of role, fake_role, which was removed", Roles.hasRole(FakeRole));
 	}
 	
 	/**
@@ -278,9 +275,8 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testRemoveRoleById() {
-		SecRelSystem.removeRole(FakeRole.getId());
-		Assert.assertFalse("System claims existence of role, fake_role, which was removed",
-		        SecRelSystem.hasRole(FakeRole));
+		Roles.removeRole(FakeRole.getId());
+		Assert.assertFalse("System claims existence of role, fake_role, which was removed", Roles.hasRole(FakeRole));
 	}
 	
 	/**
@@ -288,7 +284,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testRemoveRoleByIdNonExistantRole() {
-		SecRelSystem.removeRole(-1);
+		Roles.removeRole(-1);
 	}
 	
 	/**
@@ -296,7 +292,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testRemoveRoleByIdNullId() {
-		SecRelSystem.removeRole((Integer) null);
+		Roles.removeRole((Integer) null);
 	}
 	
 	/**
@@ -304,9 +300,8 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test
 	public void testRemoveRoleByName() {
-		SecRelSystem.removeRole("fake_role");
-		Assert.assertFalse("System claims existence of role, fake_role, which was removed",
-		        SecRelSystem.hasRole(FakeRole));
+		Roles.removeRole("fake_role");
+		Assert.assertFalse("System claims existence of role, fake_role, which was removed", Roles.hasRole(FakeRole));
 	}
 	
 	/**
@@ -314,7 +309,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testRemoveRoleByNameNonExistantRole() {
-		SecRelSystem.removeRole("nonexistent role");
+		Roles.removeRole("nonexistent role");
 	}
 	
 	/**
@@ -322,7 +317,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testRemoveRoleByNameNullName() {
-		SecRelSystem.removeRole((String) null);
+		Roles.removeRole((String) null);
 	}
 	
 	/**
@@ -330,9 +325,9 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testRemoveRoleNonExistantRole() {
-		Role r = SecRelSystem.createRole("nonexistent role");
-		SecRelSystem.removeRole(r);
-		SecRelSystem.removeRole(r);
+		Role r = Roles.createRole("nonexistent role");
+		Roles.removeRole(r);
+		Roles.removeRole(r);
 	}
 	
 	/**
@@ -340,7 +335,7 @@ public class SecRelSystemRoleTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testRemoveRoleNullRole() {
-		SecRelSystem.removeRole((Role) null);
+		Roles.removeRole((Role) null);
 	}
 	
 }

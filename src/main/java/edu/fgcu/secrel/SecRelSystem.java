@@ -15,12 +15,11 @@
  * Service class proves to be too abstract and more granularity is needed.
  * </p>
  */
+// Note: authorizeRole(accessType)
 package edu.fgcu.secrel;
 
-import java.io.InputStream;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.stream.Collectors;
 
 import edu.fgcu.secrel.Service.ReferenceMonitor;
 
@@ -31,14 +30,14 @@ import edu.fgcu.secrel.Service.ReferenceMonitor;
  *
  */
 interface Entity {
-
+	
 	/**
 	 * Returns the id of this entity.
 	 *
 	 * @return this entity's id
 	 */
 	Integer getId();
-
+	
 	/**
 	 * Returns the name of this entity.
 	 *
@@ -53,35 +52,72 @@ interface Entity {
  * provides a means of manipulating users, roles and services and there
  * interactions.
  * </p>
+ * <h2>Operation</h2>
  * <p>
- * <!-- TODO: give instructions -->
+ * The user identities are setup with calls to createremoveUser,
+ * create/removeRole and (un)assignRole. The services and rights are setup with
+ * calls to register/removeService and authorizeRole. <!-- unauthorizeRole is
+ * not implemented -->
+ * </p>
+ * <h2>Conventions</h2>
+ * <p>
+ * Methods that can fail report failures by throwing subclasses of
+ * RuntimeException, specifically, NullPointerException,
+ * IllegalArgumentException and IllegalStateException.
+ * </p>
+ * <h2>Unfinished Sections</h2>
+ * <p>
+ * The create/remove/assign/unassign mechanisms of the user/role system is
+ * mirrored in the role/service system, however, some changes to the user/role
+ * system may not have been applied to the role/service system. For example, I
+ * am not sure that for all the uses of member(For|Back)wardRow in the user/role
+ * system there are corresponding calls to service(For|Back)wardRow in the
+ * role/service. Furthermore, do to the lack of a Service implementation, while
+ * the user/role system is extensively tested, the role/service system is widely
+ * untested.
+ * </p>
+ * <h3>Proposed</h3>
+ * <p>
+ * It was intended to have delegate methods in the Role and User classes to
+ * create the illusion that they actually contained some logic.
+ * </p>
+ * <h2>Changes</h2>
+ * <p>
+ * Due to the growing size of this class, I moved all but three
+ * methods(makeRequest) to separate classes, i.e. Users, Roles, Members,
+ * Services and Authorizations. I debated removing the depreciated delegate
+ * functions from this class.
+ * </p>
+ * <p>
+ * A toy service, AccumulatorService, has been implemented. It still needs to be
+ * tested.
  * </p>
  *
  * @author lngibson
  *
  */
 public class SecRelSystem {
-
+	
 	/**
 	 * Maps user IDs to user names.
 	 */
 	protected static final NavigableMap<Integer, String> userIds = new TreeMap<>();
-
+	
 	/**
 	 * Maps role IDs to role names.
 	 */
 	protected static final NavigableMap<Integer, String> roleIds = new TreeMap<>();
-
+	
 	/**
 	 * Maps user names to user IDs.
 	 */
 	protected static final NavigableMap<String, Integer> userNames = new TreeMap<>();
-
+	
 	/**
 	 * Maps role names to role IDs.
 	 */
 	protected static final NavigableMap<String, Integer> roleNames = new TreeMap<>();
-
+	
 	/**
 	 * <p>
 	 * Maps users to roles.
@@ -96,7 +132,7 @@ public class SecRelSystem {
 	 * </p>
 	 */
 	protected static final NavigableSet<Long> memberForwardMap = new TreeSet<>();
-
+	
 	/**
 	 * <p>
 	 * Maps roles to users.
@@ -111,17 +147,17 @@ public class SecRelSystem {
 	 * </p>
 	 */
 	protected static final NavigableSet<Long> memberBackwardMap = new TreeSet<>();
-
+	
 	/**
 	 * Maps service IDs to services.
 	 */
 	protected static final NavigableMap<Integer, Service> serviceIds = new TreeMap<>();
-
+	
 	/**
 	 * Maps service names to service IDs.
 	 */
 	protected static final NavigableMap<String, Integer> serviceNames = new TreeMap<>();
-
+	
 	/**
 	 * <p>
 	 * Maps roles to services.
@@ -136,7 +172,7 @@ public class SecRelSystem {
 	 * </p>
 	 */
 	protected static final NavigableMap<Long, Right> serviceForwardMap = new TreeMap<>();
-
+	
 	/**
 	 * <p>
 	 * Maps services to roles.
@@ -151,50 +187,62 @@ public class SecRelSystem {
 	 * </p>
 	 */
 	protected static final NavigableMap<Long, Right> serviceBackwardMap = new TreeMap<>();
-
+	
 	/**
 	 * The number of threads in the serviceThreadPool.
 	 */
 	private static final int NUM_SERVICE_THREADS = 5;
-
+	
 	/**
 	 * The thread pool used to execute ReferenceMonitor instances.
 	 */
 	protected static ExecutorService monitorThreadPool = Executors.newCachedThreadPool();
-
+	
 	/**
 	 * The thread pool used to execute Services.
 	 */
 	protected static ExecutorService serviceThreadPool = Executors.newFixedThreadPool(NUM_SERVICE_THREADS);
-
+	
 	/**
-	 * Clears all assignments for the specified role.
+	 * Clears all assignments for the specified role. This is called when a role
+	 * is removed. If the mappings remain, if the role id is reused, the system
+	 * will inadvertently assume membership of the removed role's user in the
+	 * new role.
 	 *
 	 * @param roleId the id of the role
 	 */
 	protected static void clearRoleMembers(Integer roleId) {
+		// iterate the user ids of the role members
 		for (Integer userId : SecRelSystem.getMemberIds(roleId)) {
+			// construct forward and backward mapping rows
 			long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
 			long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
+			// remove mappings from system
 			SecRelSystem.memberForwardMap.remove(forwardRow);
 			SecRelSystem.memberBackwardMap.remove(backwardRow);
 		}
 	}
-
+	
 	/**
-	 * Clears all assignments for the specified user.
+	 * Clears all assignments for the specified user. This is called when a user
+	 * is removed. If the mappings remain, if the user id is reused, the system
+	 * will inadvertently assume membership of the new user in the roles of the
+	 * removed user.
 	 *
 	 * @param userId the id of the user
 	 */
 	protected static void clearUserRoles(Integer userId) {
+		// iterate the role ids of the user roles
 		for (Integer roleId : SecRelSystem.getRoleIds(userId)) {
+			// construct forward and backward mapping rows
 			long forwardRow = userId.longValue() << 32 | roleId;
 			long backwardRow = roleId.longValue() << 32 | userId;
+			// remove mappings from system
 			SecRelSystem.memberForwardMap.remove(forwardRow);
 			SecRelSystem.memberBackwardMap.remove(backwardRow);
 		}
 	}
-
+	
 	/**
 	 * Returns the roles authorized to invoke the service with the specified ID.
 	 *
@@ -202,15 +250,18 @@ public class SecRelSystem {
 	 * @return the ids of the roles
 	 */
 	protected static Integer[] getAuthorizedIds(Integer serviceId) {
+		// retrieve elements of backwards map corresponding to this service
 		Map<Long, Right> entries = SecRelSystem.serviceBackwardMap.subMap(serviceId.longValue() << 32,
-		        serviceId.longValue() + 1 << 32);
+				serviceId.longValue() + 1 << 32);
+		// initialize output array
 		Integer[] ids = new Integer[entries.size()];
+		// extract role ids from mapping rows
 		int i = 0;
 		for (Iterator<Long> it = entries.keySet().iterator(); it.hasNext(); i++)
 			ids[i] = (int) (it.next() & 0xffffffffl);
 		return ids;
 	}
-
+	
 	/**
 	 * Returns the users assigned to the role with the specified ID.
 	 *
@@ -218,15 +269,18 @@ public class SecRelSystem {
 	 * @return the ids of the users
 	 */
 	protected static Integer[] getMemberIds(Integer roleId) {
+		// retrieve elements of backward map corresponding to this role
 		Set<Long> entries = SecRelSystem.memberBackwardMap.subSet(roleId.longValue() << 32,
-		        roleId.longValue() + 1 << 32);
+				roleId.longValue() + 1 << 32);
+		// initialize output array
 		Integer[] ids = new Integer[entries.size()];
+		// extract user ids from mapping rows
 		int i = 0;
 		for (Iterator<Long> it = entries.iterator(); it.hasNext(); i++)
 			ids[i] = (int) (it.next() & 0xffffffffl);
 		return ids;
 	}
-
+	
 	/**
 	 * Returns the roles to which the user with the specified ID is assigned.
 	 *
@@ -234,15 +288,18 @@ public class SecRelSystem {
 	 * @return the ids of the roles
 	 */
 	protected static Integer[] getRoleIds(Integer userId) {
+		// retrieve elements of forward map corresponding to this user
 		Set<Long> entries = SecRelSystem.memberForwardMap.subSet(userId.longValue() << 32,
-		        userId.longValue() + 1 << 32);
+				userId.longValue() + 1 << 32);
+		// initialize output array
 		Integer[] ids = new Integer[entries.size()];
+		// extract role ids from mapping rows
 		int i = 0;
 		for (Iterator<Long> it = entries.iterator(); it.hasNext(); i++)
 			ids[i] = (int) (it.next() & 0xffffffffl);
 		return ids;
 	}
-
+	
 	/**
 	 * Returns the name of the role with the specified ID.
 	 *
@@ -252,7 +309,7 @@ public class SecRelSystem {
 	protected static String getRoleName(Integer id) {
 		return SecRelSystem.roleIds.get(id);
 	}
-
+	
 	/**
 	 * Returns the services the role with the specified ID is authorized to
 	 * invoke.
@@ -261,15 +318,18 @@ public class SecRelSystem {
 	 * @return the ids of the services
 	 */
 	protected static Integer[] getServiceIds(Integer roleId) {
+		// retrieve elements of forward map corresponding to this role
 		Map<Long, Right> entries = SecRelSystem.serviceForwardMap.subMap(roleId.longValue() << 32,
-		        roleId.longValue() + 1 << 32);
+				roleId.longValue() + 1 << 32);
+		// initialize output array
 		Integer[] ids = new Integer[entries.size()];
+		// extract service ids from mapping rows
 		int i = 0;
 		for (Iterator<Long> it = entries.keySet().iterator(); it.hasNext(); i++)
 			ids[i] = (int) (it.next() & 0xffffffffl);
 		return ids;
 	}
-
+	
 	/**
 	 * Returns the name of the user with the specified ID.
 	 *
@@ -279,10 +339,10 @@ public class SecRelSystem {
 	protected static String getUserName(Integer id) {
 		return SecRelSystem.userIds.get(id);
 	}
-
+	
 	/**
-	 * Returns the mapping row for use in memberBackwardRow. It consists of a
-	 * role id and a user id stored in a long in that order.
+	 * Returns the constructed mapping row for use in memberBackwardRow. It
+	 * consists of a role id and a user id stored in a long in that order.
 	 *
 	 * @param userId the id of the user
 	 * @param roleId the id of the role
@@ -291,10 +351,10 @@ public class SecRelSystem {
 	protected static Long memberBackwardRow(Integer userId, Integer roleId) {
 		return roleId.longValue() << 32 | userId;
 	}
-
+	
 	/**
-	 * Returns the mapping row for use in memberForwardRow. It consists of a
-	 * user id and a role id stored in a long in that order.
+	 * Returns the constructed mapping row for use in memberForwardRow. It
+	 * consists of a user id and a role id stored in a long in that order.
 	 *
 	 * @param userId the id of the user
 	 * @param roleId the id of the role
@@ -303,10 +363,10 @@ public class SecRelSystem {
 	protected static Long memberForwardRow(Integer userId, Integer roleId) {
 		return userId.longValue() << 32 | roleId;
 	}
-
+	
 	/**
-	 * Returns the mapping row for use in serviceBackwardRow. It consists of a
-	 * service id and a role id stored in a long in that order.
+	 * Returns the constructed mapping row for use in serviceBackwardRow. It
+	 * consists of a service id and a role id stored in a long in that order.
 	 *
 	 * @param roleId the id of the role
 	 * @param serviceId the id of the service
@@ -315,10 +375,10 @@ public class SecRelSystem {
 	protected static Long serviceBackwardRow(Integer roleId, Integer serviceId) {
 		return serviceId.longValue() << 32 | roleId;
 	}
-
+	
 	/**
-	 * Returns the mapping row for use in serviceForwardRow. It consists of a
-	 * role id and a service id stored in a long in that order.
+	 * Returns the constructed mapping row for use in serviceForwardRow. It
+	 * consists of a role id and a service id stored in a long in that order.
 	 *
 	 * @param roleId the id of the role
 	 * @param serviceId the id of the service
@@ -327,972 +387,649 @@ public class SecRelSystem {
 	protected static Long serviceForwardRow(Integer roleId, Integer serviceId) {
 		return roleId.longValue() << 32 | serviceId;
 	}
-
+	
 	/**
 	 * Assigns the specified user to the specified role.
 	 *
 	 * @param userId the id of the user
 	 * @param roleId the id of the role
-	 * @return true if successful, false otherwise
+	 * @deprecated Use {@link Members#assignRole(Integer,Integer)} instead
 	 */
-	public static boolean assignRole(Integer userId, Integer roleId) {
-		// check if a userId is null
-		if (userId == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(userId))
-			throw new IllegalArgumentException("User with that id does not exist.");
-		// check if a roleId is null
-		if (roleId == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(roleId))
-			throw new IllegalArgumentException("Role with that id does not exist.");
-		long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
-		long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
-		if (SecRelSystem.memberForwardMap.contains(forwardRow) || SecRelSystem.memberBackwardMap.contains(backwardRow))
-			throw new IllegalStateException("User is already assigned to that Role: " + forwardRow + "( " + userId
-			        + ", " + roleId + " ), " + backwardRow + "( " + roleId + ", " + userId + " )");
-		SecRelSystem.memberForwardMap.add(forwardRow);
-		SecRelSystem.memberBackwardMap.add(backwardRow);
-		return true;
+	@Deprecated
+	public static void assignRole(Integer userId, Integer roleId) {
+		Members.assignRole(userId, roleId);
 	}
-
+	
 	/**
 	 * Assigns the specified user to the specified role.
 	 *
 	 * @param userName the name of the user
 	 * @param roleName the name of the role
-	 * @return true if successful, false otherwise
+	 * @deprecated Use {@link Members#assignRole(String,String)} instead
 	 */
-	public static boolean assignRole(String userName, String roleName) {
-		// check if a userName is null
-		if (userName == null)
-		    // throw exception
-		    throw new NullPointerException("User name cannot be null.");
-		if (!SecRelSystem.userNames.containsKey(userName))
-			throw new IllegalArgumentException("User with that name does not exist.");
-		// check if a roleName is null
-		if (roleName == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		if (!SecRelSystem.roleNames.containsKey(roleName))
-			throw new IllegalArgumentException("Role with that name does not exist.");
-		Integer userId = SecRelSystem.userNames.get(userName);
-		Integer roleId = SecRelSystem.roleNames.get(roleName);
-		long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
-		long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
-		if (SecRelSystem.memberForwardMap.contains(forwardRow) || SecRelSystem.memberBackwardMap.contains(backwardRow))
-			throw new IllegalStateException("User is already assigned to that Role: " + forwardRow + "( "
-			        + SecRelSystem.userNames.get(userName) + ", " + SecRelSystem.roleNames.get(roleName) + " ), "
-			        + backwardRow + "( " + SecRelSystem.roleNames.get(roleName) + ", "
-			        + SecRelSystem.userNames.get(userName) + " )");
-		SecRelSystem.memberForwardMap.add(forwardRow);
-		SecRelSystem.memberBackwardMap.add(backwardRow);
-		return true;
+	@Deprecated
+	public static void assignRole(String userName, String roleName) {
+		Members.assignRole(userName, roleName);
 	}
-
+	
 	/**
 	 * Assigns the specified user to the specified role.
 	 *
 	 * @param user the User instance
 	 * @param role the Role instance
-	 * @return true if successful, false otherwise
+	 * @deprecated Use {@link Members#assignRole(User,Role)} instead
 	 */
-	public static boolean assignRole(User user, Role role) {
-		// check if a user is null
-		if (user == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(user.getId()))
-			throw new IllegalArgumentException("User does not exist.");
-		// check if a role is null
-		if (role == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(role.getId()))
-			throw new IllegalArgumentException("Role does not exist.");
-		Integer userId = user.getId();
-		Integer roleId = role.getId();
-		long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
-		long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
-		if (SecRelSystem.memberForwardMap.contains(forwardRow) || SecRelSystem.memberBackwardMap.contains(backwardRow))
-			throw new IllegalStateException("User is already assigned to that Role: " + forwardRow + "( " + user.getId()
-			        + ", " + role.getId() + " ), " + backwardRow + "( " + role.getId() + ", " + user.getId() + " )");
-		SecRelSystem.memberForwardMap.add(forwardRow);
-		SecRelSystem.memberBackwardMap.add(backwardRow);
-		return true;
+	@Deprecated
+	public static void assignRole(User user, Role role) {
+		Members.assignRole(user, role);
 	}
-
+	
 	/**
 	 * Authorizes the specified role to invoke the specified service.
 	 *
 	 * @param roleId the id of the role
 	 * @param serviceId the id of the service
-	 * @param accessType <!-- TODO -->
-	 * @return true if successful, false otherwise
+	 * @param accessType I do not know the purpose of this parameter
+	 * @deprecated Use {@link Authorizations#authorizeRole(Integer,Integer,int)}
+	 *             instead
 	 */
-	public static boolean authorizeRole(Integer roleId, Integer serviceId, int accessType) {
-		// check if a roleId is null
-		if (roleId == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(roleId))
-			throw new IllegalArgumentException("Role with that id does not exist.");
-		// check if a serviceId is null
-		if (serviceId == null)
-		    // throw exception
-		    throw new NullPointerException("Service id cannot be null.");
-		if (!SecRelSystem.serviceIds.containsKey(serviceId))
-			throw new IllegalArgumentException("Service with that id does not exist.");
-		Right right = new Right(roleId, serviceId, accessType);
-		long forwardRow = SecRelSystem.serviceForwardRow(roleId, serviceId);
-		long backwardRow = SecRelSystem.serviceBackwardRow(roleId, serviceId);
-		if (SecRelSystem.serviceForwardMap.containsKey(forwardRow)
-		        || SecRelSystem.serviceBackwardMap.containsKey(backwardRow))
-			throw new IllegalStateException(
-			        "Role is already authorized to invoke that Service: " + forwardRow + ", " + backwardRow);
-		SecRelSystem.serviceForwardMap.put(forwardRow, right);
-		SecRelSystem.serviceBackwardMap.put(backwardRow, right);
-		return true;
+	@Deprecated
+	public static void authorizeRole(Integer roleId, Integer serviceId, int accessType) {
+		Authorizations.authorizeRole(roleId, serviceId, accessType);
 	}
-
+	
 	/**
 	 * Authorizes the specified role to invoke the specified service.
 	 *
 	 * @param role the Role instance
 	 * @param service the Service instance
-	 * @param accessType <!-- TODO -->
-	 * @return true if successful, false otherwise
+	 * @param accessType I do not know the purpose of this parameter
+	 * @deprecated Use {@link Authorizations#authorizeRole(Role,Service,int)}
+	 *             instead
 	 */
-	public static boolean authorizeRole(Role role, Service service, int accessType) {
-		// check if a role is null
-		if (role == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(role.getId()))
-			throw new IllegalArgumentException("Role does not exist.");
-		// check if a service is null
-		if (service == null)
-		    // throw exception
-		    throw new NullPointerException("Service id cannot be null.");
-		if (!SecRelSystem.serviceIds.containsKey(service.getId()))
-			throw new IllegalArgumentException("Service does not exist.");
-		Right right = new Right(role.getId(), service.getId(), accessType);
-		Integer roleId = role.getId();
-		Integer serviceId = service.getId();
-		long forwardRow = SecRelSystem.serviceForwardRow(roleId, serviceId);
-		long backwardRow = SecRelSystem.serviceBackwardRow(roleId, serviceId);
-		if (SecRelSystem.serviceForwardMap.containsKey(forwardRow)
-		        || SecRelSystem.serviceBackwardMap.containsKey(backwardRow))
-			throw new IllegalStateException(
-			        "Role is already authorized to invoke that Service: " + forwardRow + ", " + backwardRow);
-		SecRelSystem.serviceForwardMap.put(forwardRow, right);
-		SecRelSystem.serviceBackwardMap.put(backwardRow, right);
-		return true;
+	@Deprecated
+	public static void authorizeRole(Role role, Service service, int accessType) {
+		Authorizations.authorizeRole(role, service, accessType);
 	}
-
+	
 	/**
 	 * Authorizes the specified role to invoke the specified service.
 	 *
 	 * @param roleName the name of the role
 	 * @param serviceName the name of the service
-	 * @param accessType <!-- TODO -->
-	 * @return true if successful, false otherwise
+	 * @param accessType I do not know the purpose of this parameterI do not
+	 *            know the purpose of this parameter
+	 * @deprecated Use {@link Authorizations#authorizeRole(String,String,int)}
+	 *             instead
 	 */
-	public static boolean authorizeRole(String roleName, String serviceName, int accessType) {
-		// check if a roleName is null
-		if (roleName == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		if (!SecRelSystem.roleNames.containsKey(roleName))
-			throw new IllegalArgumentException("Role with that name does not exist.");
-		// check if a serviceName is null
-		if (serviceName == null)
-		    // throw exception
-		    throw new NullPointerException("Service name cannot be null.");
-		if (!SecRelSystem.serviceNames.containsKey(serviceName))
-			throw new IllegalArgumentException("Service with that name does not exist.");
-		Service service = SecRelSystem.serviceIds.get(SecRelSystem.serviceNames.get(serviceName));
-		Right right = new Right(SecRelSystem.roleNames.get(roleName), service.getId(), accessType);
-		Integer roleId = SecRelSystem.roleNames.get(roleName);
-		Integer serviceId = SecRelSystem.serviceNames.get(serviceName);
-		long forwardRow = SecRelSystem.serviceForwardRow(roleId, serviceId);
-		long backwardRow = SecRelSystem.serviceBackwardRow(roleId, serviceId);
-		if (SecRelSystem.serviceForwardMap.containsKey(forwardRow)
-		        || SecRelSystem.serviceBackwardMap.containsKey(backwardRow))
-			throw new IllegalStateException(
-			        "Role is already authorized to invoke that Service: " + forwardRow + ", " + backwardRow);
-		SecRelSystem.serviceForwardMap.put(forwardRow, right);
-		SecRelSystem.serviceBackwardMap.put(backwardRow, right);
-		return true;
+	@Deprecated
+	public static void authorizeRole(String roleName, String serviceName, int accessType) {
+		Authorizations.authorizeRole(roleName, serviceName, accessType);
 	}
-
+	
 	/**
 	 * Creates a new role with the specified role name.
 	 *
 	 * @param name the name of the new role
 	 * @return a Role instance representing the new role
+	 * @deprecated Use {@link Roles#createRole(String)} instead
 	 */
+	@Deprecated
 	public static Role createRole(String name) {
-		// check if a name is null
-		if (name == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		// check if a role with that name already exists
-		if (SecRelSystem.roleNames.containsKey(name))
-		    // throw exception
-		    throw new IllegalArgumentException(
-		            String.format("A Role with the name \"%s\" already exists. Role(%d,\"%s\")", name,
-		                    SecRelSystem.roleNames.get(name), name));
-		// compute new roleId
-		Integer id = SecRelSystem.roleIds.isEmpty() ? 0 : SecRelSystem.roleIds.lastKey() + 1;
-		SecRelSystem.roleIds.put(id, name);
-		SecRelSystem.roleNames.put(name, id);
-		return new Role(id);
+		return Roles.createRole(name);
 	}
-
+	
 	/**
 	 * Creates a new user with the specified user name.
 	 *
 	 * @param name the name of the new user
 	 * @return a User instance representing the new user
+	 * @deprecated Use {@link Users#createUser(String)} instead
 	 */
+	@Deprecated
 	public static User createUser(String name) {
-		// check if a name is null
-		if (name == null)
-		    // throw exception
-		    throw new NullPointerException("User name cannot be null.");
-		// check if a user with that name already exists
-		if (SecRelSystem.userNames.containsKey(name))
-		    // throw exception
-		    throw new IllegalArgumentException(
-		            String.format("A User with the name \"%s\" already exists. User(%d,\"%s\")", name,
-		                    SecRelSystem.userNames.get(name), name));
-		// compute new userId
-		Integer id = SecRelSystem.userIds.isEmpty() ? 0 : SecRelSystem.userIds.lastKey() + 1;
-		SecRelSystem.userIds.put(id, name);
-		SecRelSystem.userNames.put(name, id);
-		return new User(id);
+		return Users.createUser(name);
 	}
-
+	
 	/**
 	 * Finds the role with the specified role ID if one exists.
 	 *
-	 * @param roleId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @return the corresponding Role instance
+	 * @deprecated Use {@link Roles#findRole(Integer)} instead
 	 */
+	@Deprecated
 	public static Role findRole(Integer roleId) {
-		if (SecRelSystem.roleIds.containsKey(roleId))
-			return new Role(roleId);
-		throw new IllegalArgumentException("Role with that id does not exist");
+		return Roles.findRole(roleId);
 	}
-
+	
 	/**
 	 * Finds the role with the specified role name if one exists.
 	 *
-	 * @param roleName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleName the name of the role
+	 * @return the corresponding Role instance
+	 * @deprecated Use {@link Roles#findRole(String)} instead
 	 */
+	@Deprecated
 	public static Role findRole(String roleName) {
-		if (SecRelSystem.roleNames.containsKey(roleName))
-			return new Role(SecRelSystem.roleNames.get(roleName));
-		throw new IllegalArgumentException("Role with that name does not exist");
+		return Roles.findRole(roleName);
 	}
-
+	
 	/**
 	 * Finds the service with the specified service ID if one exists.
 	 *
-	 * @param serviceId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param serviceId the id of the service
+	 * @return the corresponding Service
+	 * @deprecated Use {@link Services#findService(Integer)} instead
 	 */
+	@Deprecated
 	public static Service findService(Integer serviceId) {
-		// <!-- TODO -->
-		throw new RuntimeException("not implemented");
+		return Services.findService(serviceId);
 	}
-
+	
 	/**
 	 * Finds the service with the specified service name if one exists.
 	 *
-	 * @param serviceName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param serviceName the name of the service
+	 * @return the corresponding Service
+	 * @deprecated Use {@link Services#findService(String)} instead
 	 */
+	@Deprecated
 	public static Service findService(String serviceName) {
-		// <!-- TODO -->
-		throw new RuntimeException("not implemented");
+		return Services.findService(serviceName);
 	}
-
+	
 	/**
 	 * Finds the user with the specified user ID if one exists.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userId the id of the user
+	 * @return the corresponding User instance
+	 * @deprecated Use {@link Users#findUser(Integer)} instead
 	 */
+	@Deprecated
 	public static User findUser(Integer userId) {
-		if (SecRelSystem.userIds.containsKey(userId))
-			return new User(userId);
-		throw new IllegalArgumentException("User with that id does not exist");
+		return Users.findUser(userId);
 	}
-
+	
 	/**
 	 * Finds the user with the specified user name if one exists.
 	 *
-	 * @param userName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userName the name of the user
+	 * @return the corresponding User instance
+	 * @deprecated Use {@link Users#findUser(String)} instead
 	 */
+	@Deprecated
 	public static User findUser(String userName) {
-		if (SecRelSystem.userNames.containsKey(userName))
-			return new User(SecRelSystem.userNames.get(userName));
-		throw new IllegalArgumentException("User with that name does not exist");
+		return Users.findUser(userName);
 	}
-
+	
 	/**
 	 * Returns the roles authorized to invoke the service with the specified ID.
 	 *
-	 * @param serviceId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param serviceId the id of the service
+	 * @return the roles authorized to invoke the service
+	 * @deprecated Use {@link Authorizations#getAuthorizedRoles(Integer)}
+	 *             instead
 	 */
+	@Deprecated
 	public static NavigableSet<Role> getAuthorizedRoles(Integer serviceId) {
-		Integer[] ids = SecRelSystem.getAuthorizedIds(serviceId);
-		List<Integer> roles = Arrays.asList(ids);
-		return roles.stream().map(id -> new Role(id)).collect(Collectors.toCollection(TreeSet::new));
+		return Authorizations.getAuthorizedRoles(serviceId);
 	}
-
+	
 	/**
 	 * Returns the services the role with the specified ID is authorized to
 	 * invoke.
 	 *
-	 * @param roleId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @return the services the role is authorized to invoke
+	 * @deprecated Use {@link Authorizations#getAuthorizedServices(Integer)}
+	 *             instead
 	 */
+	@Deprecated
 	public static NavigableSet<Service> getAuthorizedServices(Integer roleId) {
-		Integer[] ids = SecRelSystem.getServiceIds(roleId);
-		List<Integer> services = Arrays.asList(ids);
-		return services.stream().map(id -> SecRelSystem.serviceIds.get(id))
-		        .collect(Collectors.toCollection(TreeSet::new));
+		return Authorizations.getAuthorizedServices(roleId);
 	}
-
+	
 	/**
 	 * Returns the users assigned to the role with the specified ID.
 	 *
-	 * @param roleId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @return the users assigned to this role
+	 * @deprecated Use {@link Members#getMembers(Integer)} instead
 	 */
+	@Deprecated
 	public static NavigableSet<User> getMembers(Integer roleId) {
-		Integer[] ids = SecRelSystem.getMemberIds(roleId);
-		List<Integer> users = Arrays.asList(ids);
-		return users.stream().map(id -> new User(id)).collect(Collectors.toCollection(TreeSet::new));
+		return Members.getMembers(roleId);
 	}
-
+	
 	/**
 	 * Returns the rights of the role with the specified ID.
 	 *
-	 * @param roleId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @return the rights associated with this role
+	 * @deprecated Use {@link Authorizations#getRoleRights(Integer)} instead
 	 */
+	@Deprecated
 	public static Set<Right> getRoleRights(Integer roleId) {
-		Integer[] ids = SecRelSystem.getServiceIds(roleId);
-		List<Integer> services = Arrays.asList(ids);
-		return services.stream()
-		        .map(id -> SecRelSystem.serviceForwardMap.get(SecRelSystem.serviceForwardRow(roleId, id)))
-		        .collect(Collectors.toCollection(HashSet::new));
+		return Authorizations.getRoleRights(roleId);
 	}
-
+	
 	/**
 	 * Returns the roles to which the user with the specified ID is assigned.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userId the id of the user
+	 * @return the roles to which the user is assigned
+	 * @deprecated Use {@link Members#getRoles(Integer)} instead
 	 */
+	@Deprecated
 	public static NavigableSet<Role> getRoles(Integer userId) {
-		Integer[] ids = SecRelSystem.getRoleIds(userId);
-		List<Integer> roles = Arrays.asList(ids);
-		return roles.stream().map(id -> new Role(id)).collect(Collectors.toCollection(TreeSet::new));
+		return Members.getRoles(userId);
 	}
-
+	
 	/**
 	 * Returns the rights of the service with the specified ID.
 	 *
-	 * @param serviceId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param serviceId the id of the service
+	 * @return the rights associated with this service
+	 * @deprecated Use {@link Authorizations#getServiceRights(Integer)} instead
 	 */
+	@Deprecated
 	public static Set<Right> getServiceRights(Integer serviceId) {
-		Integer[] ids = SecRelSystem.getAuthorizedIds(serviceId);
-		List<Integer> roles = Arrays.asList(ids);
-		return roles.stream()
-		        .map(id -> SecRelSystem.serviceForwardMap.get(SecRelSystem.serviceForwardRow(id, serviceId)))
-		        .collect(Collectors.toCollection(HashSet::new));
+		return Authorizations.getServiceRights(serviceId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the system has a role with the specified id.
 	 *
-	 * @param roleId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @return true if there is such a role
+	 * @deprecated Use {@link Roles#hasRole(Integer)} instead
 	 */
+	@Deprecated
 	public static boolean hasRole(Integer roleId) {
-		return SecRelSystem.roleIds.containsKey(roleId);
+		return Roles.hasRole(roleId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the role instance corresponds to a role in the system.
 	 *
-	 * @param role <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param role the role instance
+	 * @return true if there is such a role
+	 * @deprecated Use {@link Roles#hasRole(Role)} instead
 	 */
+	@Deprecated
 	public static boolean hasRole(Role role) {
-		return SecRelSystem.hasRole(role.getId());
+		return Roles.hasRole(role);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the system has a role with the specified name.
 	 *
-	 * @param roleName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleName the name of the role
+	 * @return true if there is such a role
+	 * @deprecated Use {@link Roles#hasRole(String)} instead
 	 */
+	@Deprecated
 	public static boolean hasRole(String roleName) {
-		return SecRelSystem.roleNames.containsKey(roleName);
+		return Roles.hasRole(roleName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the system has a service with the specified id.
 	 *
-	 * @param serviceId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param serviceId the id of the service
+	 * @return true if there is such a service
+	 * @deprecated Use {@link Services#hasService(Integer)} instead
 	 */
+	@Deprecated
 	public static boolean hasService(Integer serviceId) {
-		return SecRelSystem.serviceIds.containsKey(serviceId);
+		return Services.hasService(serviceId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the service has been registered with the system.
 	 *
-	 * @param service <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param service the service
+	 * @return true if the service has been registered
+	 * @deprecated Use {@link Services#hasService(Service)} instead
 	 */
+	@Deprecated
 	public static boolean hasService(Service service) {
-		return SecRelSystem.serviceIds.containsValue(service);
+		return Services.hasService(service);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the system has a service with the specified name.
 	 *
-	 * @param serviceName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param serviceName the name of the service
+	 * @return true if there is such a service
+	 * @deprecated Use {@link Services#hasService(String)} instead
 	 */
+	@Deprecated
 	public static boolean hasService(String serviceName) {
-		return SecRelSystem.serviceNames.containsKey(serviceName);
+		return Services.hasService(serviceName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the system has a user with the specified id.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userId the id of the user
+	 * @return true if there is such a user
+	 * @deprecated Use {@link Users#hasUser(Integer)} instead
 	 */
+	@Deprecated
 	public static boolean hasUser(Integer userId) {
-		return SecRelSystem.userIds.containsKey(userId);
+		return Users.hasUser(userId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the system has a user with the specified name.
 	 *
-	 * @param userName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userName the name of the user
+	 * @return true if there is such a user
+	 * @deprecated Use {@link Users#hasUser(String)} instead
 	 */
+	@Deprecated
 	public static boolean hasUser(String userName) {
-		return SecRelSystem.userNames.containsKey(userName);
+		return Users.hasUser(userName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the user instance corresponds to a user in the system.
 	 *
-	 * @param user <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param user the user instance
+	 * @return true if there is such a user
+	 * @deprecated Use {@link Users#hasUser(User)} instead
 	 */
+	@Deprecated
 	public static boolean hasUser(User user) {
-		return SecRelSystem.hasUser(user.getId());
+		return Users.hasUser(user);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the specified role is authorized to invoke the specified
+	 * service.
 	 *
-	 * @param roleId <!-- TODO -->
-	 * @param serviceId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @param serviceId the id of the service
+	 * @return true if the role is authorized to invoke the service
+	 * @deprecated Use {@link Authorizations#isAuthorizedFor(Integer,Integer)}
+	 *             instead
 	 */
+	@Deprecated
 	public static boolean isAuthorizedFor(Integer roleId, Integer serviceId) {
-		// check if a roleId is null
-		if (roleId == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(roleId))
-			throw new IllegalArgumentException("Role with that id does not exist.");
-		// check if a serviceId is null
-		if (serviceId == null)
-		    // throw exception
-		    throw new NullPointerException("Service id cannot be null.");
-		if (!SecRelSystem.serviceIds.containsKey(serviceId))
-			throw new IllegalArgumentException("Service with that id does not exist.");
-		return SecRelSystem.serviceForwardMap.containsKey(roleId.longValue() << 32 | serviceId);
+		return Authorizations.isAuthorizedFor(roleId, serviceId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the specified role is authorized to invoke the specified
+	 * service.
 	 *
-	 * @param role <!-- TODO -->
-	 * @param service <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param role the role instance
+	 * @param service the service
+	 * @return true if the role is authorized to invoke the service
+	 * @deprecated Use {@link Authorizations#isAuthorizedFor(Role,Service)}
+	 *             instead
 	 */
+	@Deprecated
 	public static boolean isAuthorizedFor(Role role, Service service) {
-		// check if a role is null
-		if (role == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(role.getId()))
-			throw new IllegalArgumentException("Role does not exist.");
-		// check if a service is null
-		if (service == null)
-		    // throw exception
-		    throw new NullPointerException("Service id cannot be null.");
-		if (!SecRelSystem.serviceIds.containsKey(service.getId()))
-			throw new IllegalArgumentException("Service does not exist.");
-		return SecRelSystem.serviceForwardMap.containsKey((long) role.getId() << 32 | service.getId());
+		return Authorizations.isAuthorizedFor(role, service);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the specified role is authorized to invoke the specified
+	 * service.
 	 *
-	 * @param roleName <!-- TODO -->
-	 * @param serviceName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleName the name of the role
+	 * @param serviceName the name of the service
+	 * @return true if the role is authorized to invoke the service
+	 * @deprecated Use {@link Authorizations#isAuthorizedFor(String,String)}
+	 *             instead
 	 */
+	@Deprecated
 	public static boolean isAuthorizedFor(String roleName, String serviceName) {
-		// check if a roleName is null
-		if (roleName == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		if (!SecRelSystem.roleNames.containsKey(roleName))
-			throw new IllegalArgumentException("Role with that name does not exist.");
-		// check if a serviceName is null
-		if (serviceName == null)
-		    // throw exception
-		    throw new NullPointerException("Service name cannot be null.");
-		if (!SecRelSystem.serviceNames.containsKey(serviceName))
-			throw new IllegalArgumentException("Service with that name does not exist.");
-		return SecRelSystem.serviceForwardMap.containsKey(SecRelSystem.roleNames.get(roleName).longValue() << 32
-		        | SecRelSystem.serviceIds.get(SecRelSystem.serviceNames.get(serviceName)).getId());
+		return Authorizations.isAuthorizedFor(roleName, serviceName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the specified user is assigned to the specified role.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @param roleId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userId the id of the user
+	 * @param roleId the id of the role
+	 * @return true if the user is assigned to the role
+	 * @deprecated Use {@link Members#isMemberOf(Integer,Integer)} instead
 	 */
+	@Deprecated
 	public static boolean isMemberOf(Integer userId, Integer roleId) {
-		// check if a userId is null
-		if (userId == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(userId))
-			throw new IllegalArgumentException("User with that id does not exist.");
-		// check if a roleId is null
-		if (roleId == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(roleId))
-			throw new IllegalArgumentException("Role with that id does not exist.");
-		long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
-		long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
-		return SecRelSystem.memberForwardMap.contains(forwardRow)
-		        && SecRelSystem.memberBackwardMap.contains(backwardRow);
+		return Members.isMemberOf(userId, roleId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the specified user is assigned to the specified role.
 	 *
-	 * @param userName <!-- TODO -->
-	 * @param roleName <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userName the name of the user
+	 * @param roleName the name of the role
+	 * @return true if the user is assigned to the role
+	 * @deprecated Use {@link Members#isMemberOf(String,String)} instead
 	 */
+	@Deprecated
 	public static boolean isMemberOf(String userName, String roleName) {
-		// check if a userName is null
-		if (userName == null)
-		    // throw exception
-		    throw new NullPointerException("User name cannot be null.");
-		if (!SecRelSystem.userNames.containsKey(userName))
-			throw new IllegalArgumentException("User with that name does not exist.");
-		// check if a roleName is null
-		if (roleName == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		if (!SecRelSystem.roleNames.containsKey(roleName))
-			throw new IllegalArgumentException("Role with that name does not exist.");
-		Integer userId = SecRelSystem.userNames.get(userName);
-		Integer roleId = SecRelSystem.roleNames.get(roleName);
-		long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
-		long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
-		return SecRelSystem.memberForwardMap.contains(forwardRow)
-		        && SecRelSystem.memberBackwardMap.contains(backwardRow);
+		return Members.isMemberOf(userName, roleName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Returns whether the specified user is assigned to the specified role.
 	 *
-	 * @param user <!-- TODO -->
-	 * @param role <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param user the user instance
+	 * @param role the role instance
+	 * @return true if the user is assigned to the role
+	 * @deprecated Use {@link Members#isMemberOf(User,Role)} instead
 	 */
+	@Deprecated
 	public static boolean isMemberOf(User user, Role role) {
-		// check if a user is null
-		if (user == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(user.getId()))
-			throw new IllegalArgumentException("User does not exist.");
-		// check if a role is null
-		if (role == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(role.getId()))
-			throw new IllegalArgumentException("Role does not exist.");
-		Integer userId = user.getId();
-		Integer roleId = role.getId();
-		long forwardRow = SecRelSystem.memberForwardRow(userId, roleId);
-		long backwardRow = SecRelSystem.memberBackwardRow(userId, roleId);
-		return SecRelSystem.memberForwardMap.contains(forwardRow)
-		        && SecRelSystem.memberBackwardMap.contains(backwardRow);
+		return Members.isMemberOf(user, role);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Attempts to invoke a service using the identity of the specified user.
+	 * This function returns a Handle object which can be used to open a I/O
+	 * connection to the executing thread of the service and to retrieve any
+	 * results. This function calls makeRequest(Integer, Integer, InputStream)
+	 * using an empty InputStream, that is, an InputStream that only returns
+	 * EOF.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @param serviceId <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userId userId the id of the user
+	 * @param serviceId the id of the service
+	 * @return the handle of the executing thread of the service if successful
 	 */
-	public static boolean makeRequest(Integer userId, Integer serviceId) {
-		/* <!-- TODO --> */ throw new RuntimeException("not implemented");
+	public static Service.Handle makeRequest(Integer userId, Integer serviceId) {
+		return makeRequest(userId, serviceId, new String[0], new HashMap<String, String>());
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Attempts to invoke a service using the identity of the specified user.
+	 * This function returns a Handle object which can be used to open a I/O
+	 * connection to the executing thread of the service and to retrieve any
+	 * results. The input data is streamed into the service using the supplied
+	 * InputStream.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @param serviceId <!-- TODO -->
-	 * @param data <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param userId the id of the user
+	 * @param serviceId the id of the service
+	 * @param argv an array of parameters
+	 * @param argm an map of parameters
+	 * @return the handle of the executing thread of the service if successful
 	 */
-	public static Service.Handle makeRequest(Integer userId, Integer serviceId, InputStream data) {
+	public static Service.Handle makeRequest(Integer userId, Integer serviceId, String[] argv,
+			Map<String, String> argm) {
 		// check if a userId is null
 		if (userId == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
+			// throw exception
+			throw new NullPointerException("User id cannot be null.");
 		if (!SecRelSystem.userIds.containsKey(userId))
 			throw new IllegalArgumentException("User with that id does not exist.");
 		// check if a serviceId is null
 		if (serviceId == null)
-		    // throw exception
-		    throw new NullPointerException("Service id cannot be null.");
+			// throw exception
+			throw new NullPointerException("Service id cannot be null.");
 		if (!SecRelSystem.serviceIds.containsKey(serviceId))
 			throw new IllegalArgumentException("Service with that id does not exist.");
 		Service service = SecRelSystem.serviceIds.get(serviceId);
 		ReferenceMonitor monitor = service.monitor(userId);
 		if (monitor.checkRights())
-			return service.invokeService(data);
+			return service.invokeService(argv, argm);
 		return null;
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Registers the Service with the system.
 	 *
-	 * @param userId <!-- TODO -->
-	 * @param serviceId <!-- TODO -->
-	 * @param data <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param service the Service to be registered
+	 * @deprecated Use {@link Services#registerService(Service)} instead
 	 */
-	public static boolean makeRequest(Integer userId, Integer serviceId, String data) {
-		/* <!-- TODO --> */ throw new RuntimeException("not implemented");
+	@Deprecated
+	public static void registerService(Service service) {
+		Services.registerService(service);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified role from the system.
 	 *
-	 * @param service <!-- TODO -->
-	 * @return <!-- TODO -->
+	 * @param roleId the id of the role
+	 * @deprecated Use {@link Roles#removeRole(Integer)} instead
 	 */
-	public static boolean registerService(Service service) {
-		// check if a service is null
-		if (service == null)
-		    // throw exception
-		    throw new NullPointerException("Service cannot be null.");
-		// check if service is already registered
-		if (SecRelSystem.serviceIds.containsValue(service))
-		    // exit method
-		    return false;
-		// check if a service with that name already exists
-		if (SecRelSystem.serviceNames.containsKey(service.getName()))
-		    // throw exception
-		    throw new IllegalArgumentException(
-		            String.format("A Service with the name \"%s\" already exists.", service.getName()));
-		// compute new serviceId
-		Integer id = SecRelSystem.serviceIds.isEmpty() ? 0 : SecRelSystem.serviceIds.lastKey() + 1;
-		try {
-			// attempt to set id
-			service.setId(id);
-		}
-		catch (IllegalStateException e) {
-			// id is already set retrieve id
-			id = service.getId();
-			// check if id is already in use
-			if (SecRelSystem.serviceIds.containsKey(id))
-			    // throw exception
-			    throw new IllegalStateException("Service id is already in use.");
-		}
-		SecRelSystem.serviceIds.put(id, service);
-		SecRelSystem.serviceNames.put(service.getName(), id);
-		return true;
-	}
-
-	/**
-	 * <!-- TODO -->
-	 *
-	 * @param roleId <!-- TODO -->
-	 */
+	@Deprecated
 	public static void removeRole(Integer roleId) {
-		// check if a roleId is null
-		if (roleId == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(roleId))
-			throw new IllegalArgumentException("Role does not exist.");
-		SecRelSystem.clearRoleMembers(roleId);
-		SecRelSystem.roleNames.remove(SecRelSystem.roleIds.get(roleId));
-		SecRelSystem.roleIds.remove(roleId);
+		Roles.removeRole(roleId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified role from the system.
 	 *
-	 * @param role <!-- TODO -->
+	 * @param role the role instance
+	 * @deprecated Use {@link Roles#removeRole(Role)} instead
 	 */
+	@Deprecated
 	public static void removeRole(Role role) {
-		// check if a role is null
-		if (role == null)
-		    // throw exception
-		    throw new NullPointerException("Role cannot be null.");
-		SecRelSystem.removeRole(role.getId());
+		Roles.removeRole(role);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified role from the system.
 	 *
-	 * @param roleName <!-- TODO -->
+	 * @param roleName the name of the role
+	 * @deprecated Use {@link Roles#removeRole(String)} instead
 	 */
+	@Deprecated
 	public static void removeRole(String roleName) {
-		// check if a roleName is null
-		if (roleName == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		if (!SecRelSystem.roleNames.containsKey(roleName))
-			throw new IllegalArgumentException("Role does not exist.");
-		Integer roleId = SecRelSystem.roleNames.get(roleName);
-		SecRelSystem.clearRoleMembers(roleId);
-		SecRelSystem.roleIds.remove(roleId);
-		SecRelSystem.roleNames.remove(roleName);
+		Roles.removeRole(roleName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified service from the system.
 	 *
-	 * @param serviceId <!-- TODO -->
+	 * @param serviceId the id of the service
+	 * @deprecated Use {@link Services#removeService(Integer)} instead
 	 */
+	@Deprecated
 	public static void removeService(Integer serviceId) {
-		// check if a serviceId is null
-		if (serviceId == null)
-		    // throw exception
-		    throw new NullPointerException("Service id cannot be null.");
-		if (!SecRelSystem.serviceIds.containsKey(serviceId))
-			throw new IllegalArgumentException("Service does not exist.");
-		Service service = SecRelSystem.serviceIds.get(serviceId);
-		SecRelSystem.serviceNames.remove(service.getName());
-		SecRelSystem.serviceIds.remove(serviceId);
+		Services.removeService(serviceId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified service from the system.
 	 *
-	 * @param service <!-- TODO -->
+	 * @param service the service instance
+	 * @deprecated Use {@link Services#removeService(Service)} instead
 	 */
+	@Deprecated
 	public static void removeService(Service service) {
-		// check if a service is null
-		if (service == null)
-		    // throw exception
-		    throw new NullPointerException("Service cannot be null.");
-		SecRelSystem.removeService(service.getId());
-		// check if service is registered
-		if (!SecRelSystem.serviceNames.containsValue(service))
-			throw new IllegalArgumentException("Service is not registered.");
-		SecRelSystem.serviceIds.remove(service.getId());
-		SecRelSystem.serviceNames.remove(service.getName());
+		Services.removeService(service);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified service from the system.
 	 *
-	 * @param serviceName <!-- TODO -->
+	 * @param serviceName the name of the service
+	 * @deprecated Use {@link Services#removeService(String)} instead
 	 */
+	@Deprecated
 	public static void removeService(String serviceName) {
-		// check if a serviceName is null
-		if (serviceName == null)
-		    // throw exception
-		    throw new NullPointerException("Service name cannot be null.");
-		if (!SecRelSystem.serviceNames.containsKey(serviceName))
-			throw new IllegalArgumentException("Service does not exist.");
-		Service service = SecRelSystem.serviceIds.get(SecRelSystem.serviceNames.get(serviceName));
-		SecRelSystem.serviceIds.remove(service.getId());
-		SecRelSystem.serviceNames.remove(serviceName);
+		Services.removeService(serviceName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified user from the system.
 	 *
-	 * @param userId <!-- TODO -->
+	 * @param userId the id of the user
+	 * @deprecated Use {@link Users#removeUser(Integer)} instead
 	 */
+	@Deprecated
 	public static void removeUser(Integer userId) {
-		// check if a userId is null
-		if (userId == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(userId))
-			throw new IllegalArgumentException("User does not exist.");
-		SecRelSystem.clearUserRoles(userId);
-		SecRelSystem.userNames.remove(SecRelSystem.userIds.get(userId));
-		SecRelSystem.userIds.remove(userId);
+		Users.removeUser(userId);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified user from the system.
 	 *
-	 * @param userName <!-- TODO -->
+	 * @param userName the string of the user
+	 * @deprecated Use {@link Users#removeUser(String)} instead
 	 */
+	@Deprecated
 	public static void removeUser(String userName) {
-		// check if a userName is null
-		if (userName == null)
-		    // throw exception
-		    throw new NullPointerException("User name cannot be null.");
-		if (!SecRelSystem.userNames.containsKey(userName))
-			throw new IllegalArgumentException("User does not exist.");
-		Integer userId = SecRelSystem.userNames.get(userName);
-		SecRelSystem.clearUserRoles(userId);
-		SecRelSystem.userIds.remove(userId);
-		SecRelSystem.userNames.remove(userName);
+		Users.removeUser(userName);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Removes the specified user from the system.
 	 *
-	 * @param user <!-- TODO -->
+	 * @param user the user instance
+	 * @deprecated Use {@link Users#removeUser(User)} instead
 	 */
+	@Deprecated
 	public static void removeUser(User user) {
-		// check if a user is null
-		if (user == null)
-		    // throw exception
-		    throw new NullPointerException("User cannot be null.");
-		SecRelSystem.removeUser(user.getId());
+		Users.removeUser(user);
 	}
-
+	
 	/**
 	 * Unassigns the specified user from the specified role.
 	 *
 	 * @param userId the id of the user
 	 * @param roleId the id of the role
-	 * @return true if successful, false otherwise
+	 * @deprecated Use {@link Members#unassignRole(Integer,Integer)} instead
 	 */
-	public static boolean unassignRole(Integer userId, Integer roleId) {
-		// check if a userId is null
-		if (userId == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(userId))
-			throw new IllegalArgumentException("User with that id does not exist.");
-		// check if a roleId is null
-		if (roleId == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(roleId))
-			throw new IllegalArgumentException("Role with that id does not exist.");
-		long forwardRow = userId.longValue() << 32 | roleId;
-		long backwardRow = roleId.longValue() << 32 | userId;
-		if (!(SecRelSystem.memberForwardMap.contains(forwardRow)
-		        && SecRelSystem.memberBackwardMap.contains(backwardRow)))
-			throw new IllegalArgumentException("User was not assigned to that Role");
-		return SecRelSystem.memberForwardMap.remove(forwardRow) && SecRelSystem.memberBackwardMap.remove(backwardRow);
+	@Deprecated
+	public static void unassignRole(Integer userId, Integer roleId) {
+		Members.unassignRole(userId, roleId);
 	}
-
+	
 	/**
 	 * Unassigns the specified user from the specified role.
 	 *
 	 * @param userName the name of the user
 	 * @param roleName the name of the role
-	 * @return true if successful, false otherwise
+	 * @deprecated Use {@link Members#unassignRole(String,String)} instead
 	 */
-	public static boolean unassignRole(String userName, String roleName) {
-		// check if a userName is null
-		if (userName == null)
-		    // throw exception
-		    throw new NullPointerException("User name cannot be null.");
-		if (!SecRelSystem.userNames.containsKey(userName))
-			throw new IllegalArgumentException("User with that name does not exist.");
-		// check if a roleName is null
-		if (roleName == null)
-		    // throw exception
-		    throw new NullPointerException("Role name cannot be null.");
-		if (!SecRelSystem.roleNames.containsKey(roleName))
-			throw new IllegalArgumentException("Role with that name does not exist.");
-		long forwardRow = SecRelSystem.userNames.get(userName).longValue() << 32 | SecRelSystem.roleNames.get(roleName);
-		long backwardRow = SecRelSystem.roleNames.get(roleName).longValue() << 32
-		        | SecRelSystem.userNames.get(userName);
-		if (!(SecRelSystem.memberForwardMap.contains(forwardRow)
-		        && SecRelSystem.memberBackwardMap.contains(backwardRow)))
-			throw new IllegalArgumentException("User was not assigned to that Role");
-		return SecRelSystem.memberForwardMap.remove(forwardRow) && SecRelSystem.memberBackwardMap.remove(backwardRow);
+	@Deprecated
+	public static void unassignRole(String userName, String roleName) {
+		Members.unassignRole(userName, roleName);
 	}
-
+	
 	/**
 	 * Unassigns the specified user from the specified role.
 	 *
 	 * @param user the User instance
 	 * @param role the Role instance
-	 * @return true if successful, false otherwise
+	 * @deprecated Use {@link Members#unassignRole(User,Role)} instead
 	 */
-	public static boolean unassignRole(User user, Role role) {
-		// check if a user is null
-		if (user == null)
-		    // throw exception
-		    throw new NullPointerException("User id cannot be null.");
-		if (!SecRelSystem.userIds.containsKey(user.getId()))
-			throw new IllegalArgumentException("User does not exist.");
-		// check if a role is null
-		if (role == null)
-		    // throw exception
-		    throw new NullPointerException("Role id cannot be null.");
-		if (!SecRelSystem.roleIds.containsKey(role.getId()))
-			throw new IllegalArgumentException("Role does not exist.");
-		long forwardRow = (long) user.getId() << 32 | role.getId();
-		long backwardRow = (long) role.getId() << 32 | user.getId();
-		if (!(SecRelSystem.memberForwardMap.contains(forwardRow)
-		        && SecRelSystem.memberBackwardMap.contains(backwardRow)))
-			throw new IllegalArgumentException("User was not assigned to that Role");
-		return SecRelSystem.memberForwardMap.remove(forwardRow) && SecRelSystem.memberBackwardMap.remove(backwardRow);
+	@Deprecated
+	public static void unassignRole(User user, Role role) {
+		Members.unassignRole(user, role);
 	}
-
+	
 	/**
-	 * <!-- TODO -->
+	 * Prevents instantiation of the SecRelSystem class.
 	 */
 	private SecRelSystem() {
 	}
-
+	
 }

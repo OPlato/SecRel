@@ -1,5 +1,7 @@
 /**
- * TODO
+ * This file defines the Role class. The Role class is an encapsulation of a
+ * role id along with delegate functions to SecRel Role, Member and
+ * Authorization functions.
  */
 package edu.fgcu.secrel;
 
@@ -12,7 +14,7 @@ import java.util.Set;
  * the System.
  *
  * @author lngibson
- *        
+ *
  */
 public class Role implements Entity, Comparable<Role> {
 	

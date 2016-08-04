@@ -1,5 +1,5 @@
 /*
- * <!-- TODO -->
+ * This file defines the tests of SecRelSystem's user functions.
  */
 package edu.fgcu.secrel;
 
@@ -10,7 +10,7 @@ import org.junit.*;
  * functions.
  *
  * @author lngibson
- *        
+ *
  */
 public class SecRelSystemUserTest {
 	
@@ -45,9 +45,9 @@ public class SecRelSystemUserTest {
 	@BeforeClass
 	public static void setUpBeforeClass() {
 		// create users for testing
-		SecRelSystemUserTest.administrator = SecRelSystem.createUser("administrator");
+		SecRelSystemUserTest.administrator = Users.createUser("administrator");
 		// SecRelSystemUserTest.ibuckley = System.createUser( "ibuckley" );
-		SecRelSystemUserTest.lngibson = SecRelSystem.createUser("lngibson");
+		SecRelSystemUserTest.lngibson = Users.createUser("lngibson");
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -58,10 +58,10 @@ public class SecRelSystemUserTest {
 	@AfterClass
 	public static void tearDownAfterClass() {
 		SecRelSystemDebuggingUtil.verify();
-		if (SecRelSystem.hasUser(SecRelSystemUserTest.administrator))
-			SecRelSystem.removeUser(SecRelSystemUserTest.administrator);
-		if (SecRelSystem.hasUser(SecRelSystemUserTest.lngibson))
-			SecRelSystem.removeUser(SecRelSystemUserTest.lngibson);
+		if (Users.hasUser(SecRelSystemUserTest.administrator))
+			Users.removeUser(SecRelSystemUserTest.administrator);
+		if (Users.hasUser(SecRelSystemUserTest.lngibson))
+			Users.removeUser(SecRelSystemUserTest.lngibson);
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -80,13 +80,13 @@ public class SecRelSystemUserTest {
 	public void setUp() {
 		// the fake user must be created before each execution because
 		// the RemoveUser test cases remove it
-		fakeUser = SecRelSystem.createUser("fake_user");
-		SecRelSystem.createRole("fake_role1");
-		SecRelSystem.createRole("fake_role2");
-		SecRelSystem.createRole("fake_role3");
-		SecRelSystem.assignRole("fake_user", "fake_role1");
-		SecRelSystem.assignRole("fake_user", "fake_role2");
-		SecRelSystem.assignRole("fake_user", "fake_role3");
+		fakeUser = Users.createUser("fake_user");
+		Roles.createRole("fake_role1");
+		Roles.createRole("fake_role2");
+		Roles.createRole("fake_role3");
+		Members.assignRole("fake_user", "fake_role1");
+		Members.assignRole("fake_user", "fake_role2");
+		Members.assignRole("fake_user", "fake_role3");
 		SecRelSystemDebuggingUtil.verify();
 	}
 	
@@ -100,19 +100,19 @@ public class SecRelSystemUserTest {
 		SecRelSystemDebuggingUtil.verify();
 		// the fake user must be removed so that setUp does not fail
 		// when (re)creating it
-		if (SecRelSystem.hasUser(fakeUser))
-			SecRelSystem.removeUser(fakeUser);
-		if (SecRelSystem.hasRole("fake_role1"))
-			SecRelSystem.removeRole("fake_role1");
-		if (SecRelSystem.hasRole("fake_role2"))
-			SecRelSystem.removeRole("fake_role2");
-		if (SecRelSystem.hasRole("fake_role3"))
-			SecRelSystem.removeRole("fake_role3");
+		if (Users.hasUser(fakeUser))
+			Users.removeUser(fakeUser);
+		if (Roles.hasRole("fake_role1"))
+			Roles.removeRole("fake_role1");
+		if (Roles.hasRole("fake_role2"))
+			Roles.removeRole("fake_role2");
+		if (Roles.hasRole("fake_role3"))
+			Roles.removeRole("fake_role3");
 		// the plato user is created by the CreateUser test case
 		// there are no known side effects for not removing it but it is
 		// removed just in case
-		if (SecRelSystem.hasUser("plato"))
-			SecRelSystem.removeUser("plato");
+		if (Users.hasUser("plato"))
+			Users.removeUser("plato");
 	}
 	
 	/**
@@ -120,9 +120,9 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testCreateUser() {
-		User u = SecRelSystem.createUser("plato");
+		User u = Users.createUser("plato");
 		Assert.assertNotNull("System failed to return a User instance after the plato user's creation", u);
-		Assert.assertTrue("The System failed to reflect the creation of the plato user", SecRelSystem.hasUser(u));
+		Assert.assertTrue("The System failed to reflect the creation of the plato user", Users.hasUser(u));
 	}
 	
 	/**
@@ -131,7 +131,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testCreateUserDuplicateName() {
-		SecRelSystem.createUser(SecRelSystemUserTest.lngibson.getName());
+		Users.createUser(SecRelSystemUserTest.lngibson.getName());
 	}
 	
 	/**
@@ -139,7 +139,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testCreateUserNullName() {
-		SecRelSystem.createUser(null);
+		Users.createUser(null);
 	}
 	
 	/**
@@ -147,10 +147,10 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testFindUserById() {
-		User r = SecRelSystem.findUser(SecRelSystemUserTest.administrator.getId());
+		User r = Users.findUser(SecRelSystemUserTest.administrator.getId());
 		Assert.assertNotNull("System failed to return a User instance for the administrator user", r);
 		Assert.assertEquals("System return an invalid User instance for the administrator user",
-		        SecRelSystemUserTest.administrator, r);
+				SecRelSystemUserTest.administrator, r);
 	}
 	
 	/**
@@ -158,7 +158,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testFindUserByIdNonExistent() {
-		SecRelSystem.findUser(-1);
+		Users.findUser(-1);
 	}
 	
 	/**
@@ -166,7 +166,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testFindUserByIdNullId() {
-		SecRelSystem.findUser((Integer) null);
+		Users.findUser((Integer) null);
 	}
 	
 	/**
@@ -174,10 +174,10 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testFindUserByName() {
-		User r = SecRelSystem.findUser(SecRelSystemUserTest.administrator.getName());
+		User r = Users.findUser(SecRelSystemUserTest.administrator.getName());
 		Assert.assertNotNull("System failed to return a User instance for the administrator user", r);
 		Assert.assertEquals("System return an invalid User instance for the administrator user",
-		        SecRelSystemUserTest.administrator, r);
+				SecRelSystemUserTest.administrator, r);
 	}
 	
 	/**
@@ -185,7 +185,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testFindUserByNameNonExistent() {
-		SecRelSystem.findUser("nonexistent user");
+		Users.findUser("nonexistent user");
 	}
 	
 	/**
@@ -193,7 +193,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testFindUserByNameNullName() {
-		SecRelSystem.findUser((String) null);
+		Users.findUser((String) null);
 	}
 	
 	/**
@@ -202,7 +202,7 @@ public class SecRelSystemUserTest {
 	@Test
 	public void testHasUser() {
 		Assert.assertTrue("System did not acknowledge administrator user's existence",
-		        SecRelSystem.hasUser(SecRelSystemUserTest.administrator));
+				Users.hasUser(SecRelSystemUserTest.administrator));
 	}
 	
 	/**
@@ -211,7 +211,7 @@ public class SecRelSystemUserTest {
 	@Test
 	public void testHasUserById() {
 		Assert.assertTrue("System did not acknowledge administrator user's existence",
-		        SecRelSystem.hasUser(SecRelSystemUserTest.administrator.getId()));
+				Users.hasUser(SecRelSystemUserTest.administrator.getId()));
 	}
 	
 	/**
@@ -219,7 +219,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testHasUserByIdNonExistantUser() {
-		Assert.assertFalse("System claims existence of user with id -1", SecRelSystem.hasUser(-1));
+		Assert.assertFalse("System claims existence of user with id -1", Users.hasUser(-1));
 	}
 	
 	/**
@@ -227,8 +227,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testHasUserByName() {
-		Assert.assertTrue("System did not acknowledge administrator user's existence",
-		        SecRelSystem.hasUser("administrator"));
+		Assert.assertTrue("System did not acknowledge administrator user's existence", Users.hasUser("administrator"));
 	}
 	
 	/**
@@ -237,7 +236,7 @@ public class SecRelSystemUserTest {
 	@Test
 	public void testHasUserByNameNonExistantUser() {
 		Assert.assertFalse("System claims existence of user with name 'nonexistent user'",
-		        SecRelSystem.hasUser("nonexistent user"));
+				Users.hasUser("nonexistent user"));
 	}
 	
 	/**
@@ -245,10 +244,9 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testHasUserNonExistantUser() {
-		User u = SecRelSystem.createUser("nonexistent user");
-		SecRelSystem.removeUser(u);
-		Assert.assertFalse("System claims existence of user, nonexistent user, which was removed",
-		        SecRelSystem.hasUser(u));
+		User u = Users.createUser("nonexistent user");
+		Users.removeUser(u);
+		Assert.assertFalse("System claims existence of user, nonexistent user, which was removed", Users.hasUser(u));
 	}
 	
 	/**
@@ -256,9 +254,8 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testRemoveUser() {
-		SecRelSystem.removeUser(fakeUser);
-		Assert.assertFalse("System claims existence of user, fake_user, which was removed",
-		        SecRelSystem.hasUser(fakeUser));
+		Users.removeUser(fakeUser);
+		Assert.assertFalse("System claims existence of user, fake_user, which was removed", Users.hasUser(fakeUser));
 	}
 	
 	/**
@@ -266,9 +263,8 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testRemoveUserById() {
-		SecRelSystem.removeUser(fakeUser.getId());
-		Assert.assertFalse("System claims existence of user, fake_user, which was removed",
-		        SecRelSystem.hasUser(fakeUser));
+		Users.removeUser(fakeUser.getId());
+		Assert.assertFalse("System claims existence of user, fake_user, which was removed", Users.hasUser(fakeUser));
 	}
 	
 	/**
@@ -276,7 +272,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testRemoveUserByIdNonExistantUser() {
-		SecRelSystem.removeUser(-1);
+		Users.removeUser(-1);
 	}
 	
 	/**
@@ -284,7 +280,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testRemoveUserByIdNullId() {
-		SecRelSystem.removeUser((Integer) null);
+		Users.removeUser((Integer) null);
 	}
 	
 	/**
@@ -292,9 +288,8 @@ public class SecRelSystemUserTest {
 	 */
 	@Test
 	public void testRemoveUserByName() {
-		SecRelSystem.removeUser("fake_user");
-		Assert.assertFalse("System claims existence of user, fake_user, which was removed",
-		        SecRelSystem.hasUser(fakeUser));
+		Users.removeUser("fake_user");
+		Assert.assertFalse("System claims existence of user, fake_user, which was removed", Users.hasUser(fakeUser));
 	}
 	
 	/**
@@ -302,7 +297,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testRemoveUserByNameNonExistantUser() {
-		SecRelSystem.removeUser("nonexistent user");
+		Users.removeUser("nonexistent user");
 	}
 	
 	/**
@@ -310,7 +305,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testRemoveUserByNameNullName() {
-		SecRelSystem.removeUser((String) null);
+		Users.removeUser((String) null);
 	}
 	
 	/**
@@ -318,9 +313,9 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = IllegalArgumentException.class)
 	public void testRemoveUserNonExistantUser() {
-		User u = SecRelSystem.createUser("nonexistent user");
-		SecRelSystem.removeUser(u);
-		SecRelSystem.removeUser(u);
+		User u = Users.createUser("nonexistent user");
+		Users.removeUser(u);
+		Users.removeUser(u);
 	}
 	
 	/**
@@ -328,7 +323,7 @@ public class SecRelSystemUserTest {
 	 */
 	@Test(expected = NullPointerException.class)
 	public void testRemoveUserNullUser() {
-		SecRelSystem.removeUser((User) null);
+		Users.removeUser((User) null);
 	}
 	
 }

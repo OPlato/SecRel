@@ -1,17 +1,24 @@
 /**
- *
+ * TODO: SecRelSystemServiceIntegrationTest.java comments
  */
 package edu.fgcu.secrel;
+
+import static org.junit.Assert.fail;
 
 import org.junit.*;
 
 /**
+ * <!-- TODO: SecRelSystemServiceIntegrationTest comments -->
+ *
  * @author lngibson
- *         
+ * 
  */
-public class RightsTest {
+public class SecRelSystemInvocationTest {
 
 	/**
+	 * <!-- TODO: SecRelSystemServiceIntegrationTest.setUpBeforeClass comments
+	 * -->
+	 *
 	 * @throws java.lang.Exception <!-- TODO -->
 	 */
 	@BeforeClass
@@ -20,6 +27,9 @@ public class RightsTest {
 	}
 
 	/**
+	 * <!-- TODO: SecRelSystemServiceIntegrationTest.tearDownAfterClass comments
+	 * -->
+	 *
 	 * @throws java.lang.Exception <!-- TODO -->
 	 */
 	@AfterClass
@@ -28,6 +38,8 @@ public class RightsTest {
 	}
 
 	/**
+	 * <!-- TODO: SecRelSystemServiceIntegrationTest.setUp comments -->
+	 *
 	 * @throws java.lang.Exception <!-- TODO -->
 	 */
 	@Before
@@ -36,6 +48,8 @@ public class RightsTest {
 	}
 
 	/**
+	 * <!-- TODO: SecRelSystemServiceIntegrationTest.tearDown comments -->
+	 *
 	 * @throws java.lang.Exception <!-- TODO -->
 	 */
 	@After
@@ -44,11 +58,11 @@ public class RightsTest {
 	}
 
 	/**
-	 * <!-- TODO: RightsTest.test comments -->
+	 * <!-- TODO: SecRelSystemServiceIntegrationTest.test comments -->
 	 */
 	@Test
 	public void test() {
-		Assert.fail("Not yet implemented");
+		fail("Not yet implemented");
 	}
 
 }

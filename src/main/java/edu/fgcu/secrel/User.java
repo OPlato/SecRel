@@ -1,5 +1,6 @@
 /**
- * TODO
+ * This file defines the User class. The User class is an encapsulation of a
+ * user id along with delegate functions to SecRel User and Member functions.
  */
 package edu.fgcu.secrel;
 
@@ -12,7 +13,7 @@ import java.util.Set;
  * the System.
  *
  * @author lngibson
- *        
+ *
  */
 public class User implements Entity, Comparable<User> {
 	

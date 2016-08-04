@@ -9,12 +9,15 @@ import java.nio.ByteBuffer;
 import java.util.*;
 
 /**
- * This interface represents a reliable service to be protected by the SecRel's
+ * <p>
+ * This class represents a reliable service to be protected by the SecRel's
  * role-based security system.
+ * </p>
  *
  * @author lngibson
- *        
+ *
  */
+// Note: processRequest, serviceLevel
 public abstract class Service implements Entity, Comparable<Service> {
 
 	/**
@@ -24,7 +27,7 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * messages from the executing thread and wait for its completion.
 	 *
 	 * @author lngibson
-	 *        
+	 *
 	 */
 	public class Handle {
 
@@ -69,10 +72,24 @@ public abstract class Service implements Entity, Comparable<Service> {
 		public static final int COMPLETED = 5;
 
 		/**
-		 * The queue to store message from the executing thread to the caller.
+		 * The state of the executing thread.
 		 */
-		// TODO: Thread safety mechanisms are not yet implemented
-		private LinkedList<String> messageQueue = new LinkedList<>();
+		private int state;
+
+		/**
+		 * The executing thread.
+		 */
+		private Thread thread;
+
+		/**
+		 * The stream to receive messages from the caller.
+		 */
+		private InputStream iStream;
+
+		/**
+		 * The stream to send messages to the caller.
+		 */
+		private OutputStream oStream;
 
 		/**
 		 * The results data.
@@ -85,26 +102,21 @@ public abstract class Service implements Entity, Comparable<Service> {
 		private int resultSize;
 
 		/**
-		 * The state of the executing thread.
-		 */
-		private int state;
-
-		/**
-		 * The executing thread.
-		 */
-		private Thread thread;
-
-		/**
-		 * Queues a message to the owner of this Handle instance.
+		 * Returns the input stream for use by the executing thread.
 		 *
-		 * @param message the message to send to the owner
+		 * @return the input stream
 		 */
-		protected void push(String message) {
-			synchronized (this) {
-				messageQueue.push(message);
-				notifyAll();
-				;
-			}
+		protected InputStream inputStream() {
+			return iStream;
+		}
+
+		/**
+		 * Returns the output stream for use by the executing thread.
+		 *
+		 * @return the output stream
+		 */
+		protected OutputStream outputStream() {
+			return oStream;
 		}
 
 		/**
@@ -197,6 +209,23 @@ public abstract class Service implements Entity, Comparable<Service> {
 			if (out != null)
 				return out;
 			throw new IllegalStateException(message);
+		}
+
+		/**
+		 * Initializes input and output stream using supplied streams. This is
+		 * meant to be used not by the caller but by an middle man. For example,
+		 * if user invoke service over a tcp connection, as the SecRel system
+		 * does not provide this mechanism, another application would relay the
+		 * request to the system. Then, that application would call this method
+		 * to connect the input and output stream from the caller to the
+		 * executing thread using this method.
+		 *
+		 * @param in the input stream to connect to
+		 * @param out the output stream to connect to
+		 */
+		public void connect(InputStream in, OutputStream out) {
+			iStream = new BufferedInputStream(in);
+			oStream = new BufferedOutputStream(out);
 		}
 
 		/**
@@ -307,10 +336,9 @@ public abstract class Service implements Entity, Comparable<Service> {
 					try {
 						thread.join(timeout);
 					}
-					catch (InterruptedException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
+				catch (InterruptedException e) {
+					// e.printStackTrace();
+				}
 			}
 		}
 
@@ -344,44 +372,6 @@ public abstract class Service implements Entity, Comparable<Service> {
 			if (out != null)
 				return out;
 			throw new IllegalStateException(message);
-		}
-
-		/**
-		 * Dequeues a message from the Service of this Handle if one exists. If
-		 * no message has been queued, this message may return null or wait for
-		 * a message or state change, depending on the value of the block
-		 * parameter. Setting block will cause poll() to wait for a message or
-		 * state change or until the timeout expires. If the timeout is -1, the
-		 * poll() will not timeout and will wait indefinitely for the message or
-		 * state change.
-		 *
-		 * @param block whether this method should wait for a message or state
-		 *            change
-		 * @param timeout the number of milliseconds to wait or -1 to wait
-		 *            indefinitely
-		 * @return the message from the Service or null if none exists, the
-		 *         method times out or a state change has occurred while waiting
-		 */
-		public String poll(boolean block, long timeout) {
-			String message = null;
-			synchronized (this) {
-				if (messageQueue.isEmpty()) {
-					if (block)
-						while (messageQueue.isEmpty())
-							try {
-								if (timeout != -1)
-									wait(timeout);
-								else
-									wait();
-							}
-							catch (InterruptedException e) {
-								// TODO: handle exception
-							}
-				}
-				else
-					message = messageQueue.poll();
-			}
-			return message;
 		}
 
 		/**
@@ -444,9 +434,9 @@ public abstract class Service implements Entity, Comparable<Service> {
 						else
 							wait();
 					}
-					catch (InterruptedException e) {
-						// TODO: handle exception
-					}
+				catch (InterruptedException e) {
+					// e.printStackTrace();
+				}
 			}
 			return state;
 		}
@@ -508,7 +498,7 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * invoke a Service.
 	 *
 	 * @author lngibson
-	 *        
+	 *
 	 */
 	public class ReferenceMonitor implements Runnable {
 
@@ -587,19 +577,15 @@ public abstract class Service implements Entity, Comparable<Service> {
 		 * @return whether the user has been granted access
 		 */
 		public boolean checkRights() {
-			thread = new Thread(this);
-			thread.start();
-			state = ReferenceMonitor.PENDING;
-			while (state == ReferenceMonitor.PENDING)
-				try {
-					synchronized (this) {
-						wait();
-					}
-				}
-				catch (InterruptedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
+			/**
+			 * // Using another thread and then waiting for it to finish seems
+			 * to me now to be pointless state = ReferenceMonitor.PENDING;
+			 *
+			 * SecRelSystem.monitorThreadPool.execute(this); while (state ==
+			 * ReferenceMonitor.PENDING) try { synchronized (this) { wait(); } }
+			 * catch (InterruptedException e) { // e.printStackTrace(); }
+			 */
+			run();
 			return isAuthorized;
 		}
 
@@ -652,7 +638,7 @@ public abstract class Service implements Entity, Comparable<Service> {
 		public void run() {
 			Integer[] roleIds = SecRelSystem.getRoleIds(userId);
 			for (int roleId : roleIds)
-				if (SecRelSystem.isAuthorizedFor(roleId, id))
+				if (Authorizations.isAuthorizedFor(roleId, id))
 					authorizeUser();
 			if (state == ReferenceMonitor.PENDING) {
 				state = ReferenceMonitor.UNAUTHORIZED;
@@ -668,7 +654,7 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * This class executes the Service in a separate thread.
 	 *
 	 * @author lngibson
-	 *        
+	 *
 	 */
 	public class ServiceRunner implements Runnable {
 
@@ -678,26 +664,33 @@ public abstract class Service implements Entity, Comparable<Service> {
 		private Handle handle;
 
 		/**
-		 * The input stream.
+		 * The parameters array.
 		 */
-		private InputStream stream;
+		private String[] argumentVector;
+
+		/**
+		 * The paramenters map.
+		 */
+		private Map<String, String> argumentMap;
 
 		/**
 		 * Construct a ServiceRunner for the owning Service.
 		 *
 		 * @param handle the connection to the caller of the Service
-		 * @param stream the input stream
+		 * @param argv an array of parameters
+		 * @param argm an map of parameters
 		 */
-		public ServiceRunner(Handle handle, InputStream stream) {
+		public ServiceRunner(Handle handle, String[] argv, Map<String, String> argm) {
 			super();
 			this.handle = handle;
-			this.stream = stream;
+			argumentVector = argv;
+			argumentMap = argm;
 		}
 
 		@Override
 		public void run() {
 			handle.state(Handle.RUNNING);
-			invokeServiceInner(handle, stream);
+			invokeServiceInner(handle, argumentVector, argumentMap);
 			handle.state(Handle.COMPLETED);
 		}
 	}
@@ -708,14 +701,23 @@ public abstract class Service implements Entity, Comparable<Service> {
 	private static final NavigableMap<Integer, ReferenceMonitor> monitors = new TreeMap<>();
 
 	/**
-	 * Delegates message to <code>Handle.push()</code>.
+	 * Retrieves stream from <code>Handle.inputStream()</code>.
 	 *
 	 * @param handle the Handle of this Service
-	 *			
-	 * @param message the message to send to the owner
+	 * @return the input stream
 	 */
-	protected static void push(Handle handle, String message) {
-		handle.push(message);
+	protected static InputStream inputStream(Handle handle) {
+		return handle.inputStream();
+	}
+
+	/**
+	 * Retrieves stream from <code>Handle.outputStream()</code>.
+	 *
+	 * @param handle the Handle of this Service
+	 * @return the output stream
+	 */
+	protected static OutputStream outputStream(Handle handle) {
+		return handle.outputStream();
 	}
 
 	/**
@@ -756,10 +758,10 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * be sent to any listeners registered to the Handle supplied.
 	 *
 	 * @param handle a Handle instance to communicate with this Service thread
-	 *			
-	 * @param stream the input to the Service
+	 * @param argv an array of parameters
+	 * @param argm an map of parameters
 	 */
-	protected abstract void invokeServiceInner(Handle handle, InputStream stream);
+	protected abstract void invokeServiceInner(Handle handle, String[] argv, Map<String, String> argm);
 
 	/**
 	 * Sets the id of this Service. This method is to be called by the
@@ -800,7 +802,7 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * @return this services rights
 	 */
 	public Collection<Right> getRights() {
-		return SecRelSystem.getServiceRights(id);
+		return Authorizations.getServiceRights(id);
 	}
 
 	/**
@@ -810,12 +812,13 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * This function creates a new Handle instance to pass to the
 	 * invokeServiceInner and returns the created Handle.
 	 *
-	 * @param stream the input to the Service
+	 * @param argv an array of parameters
+	 * @param argm an map of parameters
 	 * @return a Handle instance to communicate with the Service thread
 	 */
-	public Handle invokeService(InputStream stream) {
+	public Handle invokeService(String[] argv, Map<String, String> argm) {
 		Handle handle = new Handle();
-		handle.thread = new Thread(new ServiceRunner(handle, stream));
+		SecRelSystem.serviceThreadPool.execute(new ServiceRunner(handle, argv, argm));
 		handle.state = Handle.IDLE;
 		handle.thread.start();
 		return handle;
@@ -825,7 +828,7 @@ public abstract class Service implements Entity, Comparable<Service> {
 	 * Creates a new ReferenceMonitor for this Service.
 	 *
 	 * @param userId the id of the user requesting this Service
-	 *			
+	 *
 	 * @return the monitor authorizing the user's request
 	 */
 	public ReferenceMonitor monitor(int userId) {
@@ -834,19 +837,17 @@ public abstract class Service implements Entity, Comparable<Service> {
 	}
 
 	/**
-	 * TODO
+	 * I do not know the purpose of this method. I had planned to use this to
+	 * process parameters to the service invocation // so I made it abstract
 	 *
-	 * @param user TODO
-	 *			
 	 */
-	public abstract void processRequest(User user);
+	public abstract void processRequest();
 
 	/**
-	 * TODO
+	 * I do not know the purpose of this method.
 	 *
-	 * @return TODO
+	 * @return I do not now
 	 */
-	// I do not know the purpose of this method.
 	public int serviceLevel() {
 		throw new RuntimeException("not implemented");
 	}
